@@ -1,0 +1,177 @@
+@import url('https://fonts.googleapis.com/css2?family=Nanum+Gothic:wght@400;700;800&family=Nanum+Myeongjo:wght@400;700;800&family=Noto+Sans+KR:wght@300;400;500;700;900&display=swap');
+
+body {
+  font-family: 'Nanum Gothic', sans-serif;
+  color: #334155;
+  background-color: #F1F5F9;
+  -webkit-font-smoothing: antialiased;
+}
+
+#editor-canvas {
+  font-family: 'Nanum Gothic', sans-serif;
+  line-height: 2.0;
+  letter-spacing: -0.01em;
+  color: #1a1a1a;
+}
+
+.blog-content-wrapper {
+  max-width: 700px;
+  margin: 0 auto;
+}
+
+.blog-content-wrapper h1 {
+  font-size: 2.6rem;
+  font-weight: 900;
+  color: #111827;
+  margin-bottom: 4rem;
+  padding-bottom: 2rem;
+  border-bottom: 3px solid #E5E7EB;
+  text-align: left;
+  line-height: 1.35;
+  letter-spacing: -0.02em;
+  word-break: keep-all;
+}
+
+.blog-content-wrapper h2 {
+  font-size: 19px;
+  font-weight: 800;
+  color: #1f2937;
+  margin-top: 5rem;
+  margin-bottom: 2rem;
+  display: block;
+  border-left: 6px solid #03C75A;
+  background-color: #F0FDF4;
+  padding: 1rem 1.5rem;
+  border-radius: 0 12px 12px 0;
+  line-height: 1.4;
+  line-height: 1.4;
+  letter-spacing: -0.01em;
+}
+
+.blog-content-wrapper h3 {
+  font-size: 15px;
+  font-weight: 700;
+  color: #111827;
+  margin-top: 4rem;
+  margin-bottom: 2.5rem;
+  display: block;
+  border-left: 4px solid #CBD5E1;
+  padding-left: 1rem;
+  line-height: 1.4;
+}
+
+/* 키워드 강조: 배경색이 아닌 하단 하이라이트로 변경 */
+.blog-content-wrapper b {
+  font-weight: 700;
+  background: linear-gradient(to top, #FFEF00 35%, transparent 35%);
+  padding: 0 2px;
+  color: #000;
+}
+
+/* 인용구(blockquote) 전면 개편: 사용자 이미지 스타일 반영 */
+.blog-content-wrapper blockquote {
+  margin: 6rem 0;
+  padding: 4rem 2rem;
+  border: none;
+  background: transparent;
+  /* 배경 제거 */
+  text-align: center;
+  background: transparent;
+  /* 배경 제거 */
+  text-align: center;
+  position: relative;
+  font-family: 'Nanum Myeongjo', serif;
+}
+
+.blog-content-wrapper blockquote::before {
+  content: "“";
+  position: absolute;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 5rem;
+  color: #CBD5E1;
+  font-family: serif;
+  line-height: 1;
+}
+
+.blog-content-wrapper blockquote::after {
+  content: "”";
+  position: absolute;
+  bottom: -2rem;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 5rem;
+  color: #CBD5E1;
+  font-family: serif;
+  line-height: 1;
+}
+
+.blog-content-wrapper blockquote p {
+  font-size: 16px !important;
+  color: #475569;
+  font-style: italic;
+  line-height: 1.8;
+  margin: 0 !important;
+  word-break: keep-all;
+}
+
+.blog-content-wrapper p {
+  font-size: 13px;
+  margin-bottom: 2rem;
+  color: #334155;
+  background: transparent !important;
+  /* 강제 배경 제거 */
+}
+
+/* 이미지 박스 디자인 간소화 */
+.image-prompt-box {
+  margin: 6rem 0;
+  border: 1px solid #F1F5F9;
+  border-radius: 20px;
+  background: #FCFDFF;
+  overflow: hidden;
+}
+
+.image-prompt-box .header {
+  background: #F8FAFC;
+  color: #94A3B8;
+  padding: 0.6rem;
+  font-size: 10px;
+  font-weight: 800;
+  text-align: center;
+}
+
+.image-prompt-box .content {
+  padding: 1.5rem;
+  font-size: 0.9rem;
+  color: #64748B;
+  text-align: center;
+  line-height: 1.6;
+}
+
+.resource-metadata-card {
+  margin-top: 10rem;
+  padding: 3rem;
+  background: #F8FAFC;
+  border-radius: 40px;
+  border: 1px solid #EDF2F7;
+}
+
+.section-badge {
+  display: block;
+  text-align: center;
+  color: #CBD5E1;
+  font-size: 11px;
+  font-weight: 700;
+  margin-bottom: 4rem;
+}
+
+.custom-scrollbar::-webkit-scrollbar {
+  width: 5px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: #E2E8F0;
+  border-radius: 10px;
+}
