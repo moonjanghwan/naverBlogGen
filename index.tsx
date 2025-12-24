@@ -121,19 +121,21 @@ function initPersistence() {
   const savedManualTitle = localStorage.getItem(STORAGE_KEYS.MANUAL_TITLE);
   const savedManualUrl = localStorage.getItem(STORAGE_KEYS.MANUAL_URL);
 
-  if (savedSheetId) sheetIdInput.value = savedSheetId;
-  if (savedSheetName) sheetNameInput.value = savedSheetName;
-  if (savedTextModel) textModelSelect.value = savedTextModel;
-  if (savedImageModel) imageModelSelect.value = savedImageModel;
-  if (savedManualTitle) manualTitleInput.value = savedManualTitle;
-  if (savedManualUrl) manualUrlInput.value = savedManualUrl;
+  // Only set if elements exist
+  if (savedSheetId && sheetIdInput) sheetIdInput.value = savedSheetId;
+  if (savedSheetName && sheetNameInput) sheetNameInput.value = savedSheetName;
+  if (savedTextModel && textModelSelect) textModelSelect.value = savedTextModel;
+  if (savedImageModel && imageModelSelect) imageModelSelect.value = savedImageModel;
+  if (savedManualTitle && manualTitleInput) manualTitleInput.value = savedManualTitle;
+  if (savedManualUrl && manualUrlInput) manualUrlInput.value = savedManualUrl;
 
-  sheetIdInput.addEventListener('input', () => localStorage.setItem(STORAGE_KEYS.SHEET_ID, sheetIdInput.value));
-  sheetNameInput.addEventListener('input', () => localStorage.setItem(STORAGE_KEYS.SHEET_NAME, sheetNameInput.value));
-  textModelSelect.addEventListener('change', () => localStorage.setItem(STORAGE_KEYS.TEXT_MODEL, textModelSelect.value));
-  imageModelSelect.addEventListener('change', () => localStorage.setItem(STORAGE_KEYS.IMAGE_MODEL, imageModelSelect.value));
-  manualTitleInput.addEventListener('input', () => localStorage.setItem(STORAGE_KEYS.MANUAL_TITLE, manualTitleInput.value));
-  manualUrlInput.addEventListener('input', () => localStorage.setItem(STORAGE_KEYS.MANUAL_URL, manualUrlInput.value));
+  // Only add listeners if elements exist
+  sheetIdInput?.addEventListener('input', () => localStorage.setItem(STORAGE_KEYS.SHEET_ID, sheetIdInput.value));
+  sheetNameInput?.addEventListener('input', () => localStorage.setItem(STORAGE_KEYS.SHEET_NAME, sheetNameInput.value));
+  textModelSelect?.addEventListener('change', () => localStorage.setItem(STORAGE_KEYS.TEXT_MODEL, textModelSelect.value));
+  imageModelSelect?.addEventListener('change', () => localStorage.setItem(STORAGE_KEYS.IMAGE_MODEL, imageModelSelect.value));
+  manualTitleInput?.addEventListener('input', () => localStorage.setItem(STORAGE_KEYS.MANUAL_TITLE, manualTitleInput.value));
+  manualUrlInput?.addEventListener('input', () => localStorage.setItem(STORAGE_KEYS.MANUAL_URL, manualUrlInput.value));
 }
 
 const SYSTEM_INSTRUCTION = `
@@ -362,7 +364,10 @@ genImageBtn.onclick = async () => {
   const pendingBoxes = Array.from(boxes).filter(box => !box.querySelector('img'));
   if (pendingBoxes.length === 0) return alert("생성할 이미지가 없습니다.");
 
+  const originalText = genImageBtn.innerHTML;
+  genImageBtn.innerHTML = `<svg class="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg> 생성중...`;
   genImageBtn.disabled = true;
+
   for (let box of pendingBoxes) {
     const prompt = (box as HTMLElement).getAttribute('data-prompt');
     if (prompt) {
@@ -370,6 +375,8 @@ genImageBtn.onclick = async () => {
       await generateImageWithPrompt(box as HTMLElement, prompt, true);
     }
   }
+
+  genImageBtn.innerHTML = originalText;
   genImageBtn.disabled = false;
   setGlobalStatus(false);
 };
@@ -439,6 +446,10 @@ async function generateImageWithPrompt(box: HTMLElement, promptText: string, aut
 
 
 copyAllBtn.onclick = async () => {
+  const originalText = copyAllBtn.innerHTML;
+  copyAllBtn.innerHTML = `<svg class="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg> 복사 중...`;
+  copyAllBtn.disabled = true;
+
   const posts = (window as any).generatedBlogPosts || [];
   const selectedPost = posts.find((p: any) => p.selected);
 
@@ -489,7 +500,13 @@ copyAllBtn.onclick = async () => {
   })];
 
   await navigator.clipboard.write(data);
-  alert("통합 원고 복사 완료 (이미지 제외됨)");
+
+  // Show success state
+  copyAllBtn.innerHTML = '✅ 복사 완료!';
+  setTimeout(() => {
+    copyAllBtn.innerHTML = originalText;
+    copyAllBtn.disabled = false;
+  }, 1500);
 };
 
 // Helper function to apply inline styles for Naver Blog
@@ -604,6 +621,8 @@ runManualBtn.onclick = async () => {
 };
 
 runAutomationBtn.onclick = async () => {
+  const originalText = runAutomationBtn.innerHTML;
+
   // Check for selected news items in canvas first
   const selectedCheckboxes = document.querySelectorAll('.news-checkbox:checked') as NodeListOf<HTMLInputElement>;
   const scrapedItems = (window as any).scrapedNewsItems || [];
@@ -620,6 +639,7 @@ runAutomationBtn.onclick = async () => {
       return;
     }
 
+    runAutomationBtn.innerHTML = `<svg class="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg> 블로그 생성중...`;
     runAutomationBtn.disabled = true;
     statusContainer.innerHTML = '';
     addLog('blog', 'Blog Generator', `Generating blog content for ${selectedItems.length} selected items...`, 'success');
@@ -635,6 +655,7 @@ runAutomationBtn.onclick = async () => {
     } catch (e: any) {
       addLog('err', 'Error', e.message, 'error');
     } finally {
+      runAutomationBtn.innerHTML = originalText;
       runAutomationBtn.disabled = false;
       setGlobalStatus(false);
     }
@@ -758,6 +779,196 @@ Artificial Intelligence (Reddit) https://www.reddit.com/r/artificial/.rss
 artificial intelligence - Google News https://news.google.com/news/rss/search/section/q/artificial%20intelligence/artificial%20intelligence?hl=en&gl=US
 Artificial intelligence (AI) | The Guardian https://www.guardian.co.uk/technology/artificialintelligenceai/rss`;
 
+// Reusable translate handler function for all search types
+function attachTranslateHandler() {
+  const translateBtn = document.getElementById('translate-news-btn');
+  if (!translateBtn) return;
+
+  // Remove existing listener by cloning
+  const newBtn = translateBtn.cloneNode(true) as HTMLElement;
+  translateBtn.parentNode?.replaceChild(newBtn, translateBtn);
+
+  newBtn.addEventListener('click', async () => {
+    const items = (window as any).scrapedNewsItems || [];
+    if (items.length === 0) {
+      alert('번역할 뉴스가 없습니다.');
+      return;
+    }
+
+    newBtn.innerHTML = '⏳ 번역 중...';
+    (newBtn as HTMLButtonElement).disabled = true;
+
+    try {
+      const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+
+      const prompt = `
+        Translate the following news items to Korean. Keep the same structure.
+        Return STRICT JSON ONLY, no markdown:
+        
+        Items to translate:
+        ${JSON.stringify(items.map((i: any) => ({ title: i.title, content: i.content })))}
+        
+        Output format:
+        { "translations": [{ "title": "한국어 제목", "content": "한국어 내용" }, ...] }
+      `;
+
+      const response = await ai.models.generateContent({
+        model: "gemini-2.0-flash-exp",
+        contents: { parts: [{ text: prompt }] }
+      });
+
+      const text = response.text || "";
+      const startIdx = text.indexOf('{');
+      const endIdx = text.lastIndexOf('}');
+
+      if (startIdx !== -1 && endIdx !== -1) {
+        const jsonStr = text.substring(startIdx, endIdx + 1);
+        const data = JSON.parse(jsonStr);
+
+        // Update DOM with translations
+        data.translations.forEach((trans: any, idx: number) => {
+          const itemEl = document.querySelector(`.news-item[data-item-id="${idx}"]`);
+          if (itemEl) {
+            const titleEl = itemEl.querySelector('.news-title');
+            const contentEl = itemEl.querySelector('.news-content');
+            if (titleEl) titleEl.textContent = trans.title;
+            if (contentEl) contentEl.textContent = trans.content;
+          }
+        });
+
+        // Update global items with translations
+        data.translations.forEach((trans: any, idx: number) => {
+          if (items[idx]) {
+            items[idx].title = trans.title;
+            items[idx].content = trans.content;
+          }
+        });
+
+        addLog('translate', 'Translation', `${data.translations.length} items translated!`, 'success');
+        newBtn.innerHTML = '✅ 번역 완료';
+      }
+    } catch (e: any) {
+      addLog('translate-err', 'Translation Error', e.message, 'error');
+      newBtn.innerHTML = '❌ 오류 발생';
+    }
+
+    setTimeout(() => {
+      newBtn.innerHTML = '🌐 번역하기';
+      (newBtn as HTMLButtonElement).disabled = false;
+    }, 2000);
+  });
+}
+// Default Naver Sources (Korean news)
+const DEFAULT_NAVER_SOURCES = [
+  { name: '네이버IT뉴스', url: 'https://news.naver.com/section/105', category: 'IT' },
+  { name: '네이버경제', url: 'https://news.naver.com/section/101', category: '경제' },
+  { name: '네이버건강', url: 'https://health.naver.com', category: '건강' },
+  { name: '시니어조선', url: 'https://senior.chosun.com', category: '시니어' },
+  { name: '네이버여행', url: 'https://travel.naver.com', category: '여행' },
+  { name: '정책브리핑', url: 'https://www.korea.kr', category: '행정' }
+];
+
+const NAVER_SOURCES_KEY = 'naver_search_sources';
+
+// Naver sources UI elements
+const naverSiteListContainer = document.getElementById('naver-site-list-container') as HTMLElement;
+const newNaverName = document.getElementById('new-naver-name') as HTMLInputElement;
+const newNaverCategory = document.getElementById('new-naver-category') as HTMLInputElement;
+const newNaverUrl = document.getElementById('new-naver-url') as HTMLInputElement;
+const addNaverSiteBtn = document.getElementById('add-naver-site-btn') as HTMLButtonElement;
+const resetNaverSitesBtn = document.getElementById('reset-naver-sites-btn') as HTMLButtonElement;
+
+// Get Naver sources from localStorage or defaults
+function getNaverSources(): { name: string; url: string; category: string }[] {
+  const saved = localStorage.getItem(NAVER_SOURCES_KEY);
+  if (saved) {
+    try {
+      return JSON.parse(saved);
+    } catch {
+      return [...DEFAULT_NAVER_SOURCES];
+    }
+  }
+  return [...DEFAULT_NAVER_SOURCES];
+}
+
+// Save Naver sources to localStorage
+function saveNaverSources(sources: { name: string; url: string; category: string }[]) {
+  localStorage.setItem(NAVER_SOURCES_KEY, JSON.stringify(sources));
+}
+
+// Render Naver sources list
+function renderNaverSourcesList() {
+  if (!naverSiteListContainer) return;
+
+  const sources = getNaverSources();
+
+  if (sources.length === 0) {
+    naverSiteListContainer.innerHTML = '<li class="text-xs text-gray-400 italic p-2">소스가 없습니다. 추가해주세요.</li>';
+    return;
+  }
+
+  naverSiteListContainer.innerHTML = sources.map((source, idx) => `
+    <li class="flex items-center gap-2 bg-white border border-green-100 rounded-lg p-2 group hover:border-green-300 transition-colors">
+      <span class="bg-green-100 text-green-700 text-[10px] font-bold px-2 py-0.5 rounded">${source.category}</span>
+      <span class="text-xs font-bold text-gray-800 flex-1 truncate">${source.name}</span>
+      <span class="text-[10px] text-gray-400 truncate max-w-[150px]" title="${source.url}">${source.url}</span>
+      <button class="delete-naver-site-btn opacity-0 group-hover:opacity-100 text-red-400 hover:text-red-600 transition-all" data-idx="${idx}">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+        </svg>
+      </button>
+    </li>
+  `).join('');
+
+  // Attach delete handlers
+  naverSiteListContainer.querySelectorAll('.delete-naver-site-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const idx = parseInt(btn.getAttribute('data-idx') || '0');
+      const sources = getNaverSources();
+      sources.splice(idx, 1);
+      saveNaverSources(sources);
+      renderNaverSourcesList();
+    });
+  });
+}
+
+// Add Naver source handler
+if (addNaverSiteBtn) {
+  addNaverSiteBtn.onclick = () => {
+    const name = newNaverName?.value.trim();
+    const category = newNaverCategory?.value.trim() || '기타';
+    const url = newNaverUrl?.value.trim();
+
+    if (!name || !url) {
+      alert('사이트명과 URL을 입력해주세요.');
+      return;
+    }
+
+    const sources = getNaverSources();
+    sources.push({ name, url, category });
+    saveNaverSources(sources);
+    renderNaverSourcesList();
+
+    // Clear inputs
+    if (newNaverName) newNaverName.value = '';
+    if (newNaverCategory) newNaverCategory.value = '';
+    if (newNaverUrl) newNaverUrl.value = '';
+  };
+}
+
+// Reset Naver sources to defaults
+if (resetNaverSitesBtn) {
+  resetNaverSitesBtn.onclick = () => {
+    if (confirm('기본값으로 복원하시겠습니까?')) {
+      saveNaverSources([...DEFAULT_NAVER_SOURCES]);
+      renderNaverSourcesList();
+    }
+  };
+}
+
+// Initialize Naver sources list on load
+renderNaverSourcesList();
+
 // Modal Logic
 if (settingsTriggerBtn && settingsModal) {
   settingsTriggerBtn.onclick = () => settingsModal.classList.remove('hidden');
@@ -781,6 +992,202 @@ if (searchNewsBtn) {
   };
 }
 
+// Header "Google 검색" Button Logic
+const googleSearchBtn = document.getElementById('google-search-btn') as HTMLButtonElement;
+if (googleSearchBtn) {
+  googleSearchBtn.onclick = async () => {
+    const originalText = googleSearchBtn.innerHTML;
+    googleSearchBtn.innerHTML = `<svg class="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg> Google 검색중...`;
+    googleSearchBtn.disabled = true;
+
+    await runGoogleSearch();
+
+    googleSearchBtn.innerHTML = originalText;
+    googleSearchBtn.disabled = false;
+  };
+}
+
+// Google Search Function - uses Gemini with Google Search grounding
+async function runGoogleSearch() {
+  const keywordInput = document.getElementById('auto-keyword-input') as HTMLInputElement;
+  const autoStatusText = document.getElementById('auto-status-text') as HTMLElement;
+  let keyword = keywordInput?.value.trim() || '';
+
+  // Korean news categories from news.google.com/kr
+  const categories = [
+    { name: '과학기술', query: 'science technology Korea' },
+    { name: '건강', query: 'health wellness Korea' },
+    { name: '경제', query: 'economy business Korea' },
+    { name: '시니어', query: 'senior elderly Korea' },
+    { name: '여행', query: 'travel tourism Korea' },
+    { name: '정치', query: 'politics Korea' }
+  ];
+  const searchLabel = keyword ? `"${keyword}"` : '한국 인기 뉴스';
+
+  autoStatusText.textContent = `🔍 Google 뉴스 검색: ${searchLabel}...`;
+  addLog('google', 'Google News', `Searching ${categories.length} Korean categories for ${searchLabel}...`, 'success');
+
+  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+  const allItems: { site: string; title: string; content: string; link: string; date: string; category: string }[] = [];
+
+  // Switch to news tab and create container
+  switchToTab('news');
+
+  if (newsCanvas) {
+    const containerHTML = `
+      <div id="news-results-container" style="border: 2px solid #4285f4; border-radius: 16px; padding: 24px; margin-bottom: 24px; background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; flex-wrap: wrap; gap: 12px;">
+          <h2 style="font-size: 1.5rem; font-weight: 900; color: #1e40af; display: flex; align-items: center; gap: 8px; margin: 0;">
+            <span style="background: linear-gradient(135deg, #4285f4, #ea4335, #fbbc04, #34a853); color: white; padding: 4px 10px; border-radius: 8px; font-size: 1rem;">G</span>
+            Google 뉴스 한국 <span style="font-size: 0.875rem; font-weight: 500; color: #60a5fa;">(${searchLabel} · ${new Date().toLocaleDateString('ko-KR')})</span>
+          </h2>
+          <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+            <button id="select-all-news-btn" style="padding: 8px 12px; background: #f3f4f6; border: 1px solid #d1d5db; border-radius: 8px; font-size: 0.75rem; font-weight: 600; cursor: pointer;">☑️ 전체 선택</button>
+            <button id="deselect-all-news-btn" style="padding: 8px 12px; background: #f3f4f6; border: 1px solid #d1d5db; border-radius: 8px; font-size: 0.75rem; font-weight: 600; cursor: pointer;">⬜ 선택 해제</button>
+            <button id="translate-news-btn" style="padding: 8px 16px; background: linear-gradient(135deg, #10b981, #059669); color: white; border: none; border-radius: 8px; font-size: 0.875rem; font-weight: 700; cursor: pointer;">🌐 번역하기</button>
+          </div>
+        </div>
+        <div id="news-items-container"></div>
+      </div>
+    `;
+    newsCanvas.innerHTML = containerHTML;
+  }
+
+  const containerEl = document.getElementById('news-items-container');
+  let globalItemIndex = 0;
+
+  // Sequential search per category
+  for (let i = 0; i < categories.length; i++) {
+    const category = categories[i];
+    autoStatusText.textContent = `📡 검색 중 ${i + 1}/${categories.length}: ${category.name}...`;
+
+    try {
+      const searchTopic = keyword ? `${keyword} ${category.name} 한국` : `${category.query} 오늘의 인기 뉴스`;
+
+      const prompt = `
+        You are a Korean news data extraction API.
+        Search for the TOP 5 MOST POPULAR news articles from Google News Korea (news.google.com) about: ${searchTopic}
+        
+        Category: ${category.name}
+        Source: Google News Korea (news.google.com/topics?hl=ko&gl=KR)
+
+        IMPORTANT:
+        - Find articles from Korean news sources (한국 뉴스).
+        - Prioritize by POPULARITY (조회수, 히트 수, 인기순).
+        - Articles should be RECENT (within last 24-48 hours).
+        - Content summary should be in Korean (한국어).
+        - Include the publish date for each article.
+        - Return exactly 5 items sorted by popularity.
+
+        Output: STRICT RAW JSON ONLY. No markdown.
+
+        JSON Schema:
+        {
+            "items": [
+                { "title": "한국어 제목", "date": "YYYY-MM-DD", "content": "한국어 요약 1-2문장", "link": "https://...", "source": "뉴스 출처명", "hits": "조회수 (예: 1만회)" }
+            ]
+        }
+      `;
+
+      const response = await ai.models.generateContent({
+        model: "gemini-2.0-flash-exp",
+        contents: { parts: [{ text: prompt }] },
+        config: { tools: [{ googleSearch: {} }] }
+      });
+
+      const text = response.text || "";
+      const startIndex = text.indexOf('{');
+      const endIndex = text.lastIndexOf('}');
+
+      if (startIndex !== -1 && endIndex !== -1) {
+        const jsonStr = text.substring(startIndex, endIndex + 1);
+        const data = JSON.parse(jsonStr);
+
+        // Store items
+        data.items.forEach((item: any) => {
+          allItems.push({
+            site: item.source || category.name,
+            title: item.title,
+            content: item.content,
+            link: item.link,
+            date: item.date || 'N/A',
+            category: category.name
+          });
+        });
+
+        // Real-time display
+        if (containerEl && data.items.length > 0) {
+          const siteHTML = `
+            <div style="margin-bottom: 20px;" class="site-section">
+              <h3 style="font-size: 1rem; font-weight: 800; color: #1e40af; margin-bottom: 12px; padding-bottom: 4px; border-bottom: 2px solid #93c5fd; display: flex; align-items: center; gap: 8px;">
+                <span style="background: #dbeafe; padding: 2px 8px; border-radius: 6px; font-size: 0.75rem; color: #1d4ed8;">${category.name}</span>
+              </h3>
+              ${data.items.map((item: any) => {
+            const idx = globalItemIndex++;
+            return `
+                <div class="news-item" data-item-id="${idx}" style="display: flex; gap: 12px; align-items: flex-start; padding: 12px 16px; margin: 8px 0 12px 0; background-color: #ffffff; border-radius: 8px; border: 2px solid #bfdbfe; box-shadow: 0 1px 3px rgba(0,0,0,0.05); transition: all 0.2s;">
+                  <input type="checkbox" class="news-checkbox" data-item-id="${idx}" style="width: 18px; height: 18px; margin-top: 4px; cursor: pointer; accent-color: #4285f4;">
+                  <div style="flex: 1;">
+                    <p class="news-title" style="font-size: 1rem; font-weight: 700; color: #111827; margin-bottom: 4px;">${item.title}</p>
+                    <p style="font-size: 0.7rem; color: #9ca3af; margin-bottom: 6px;">📅 ${item.date || 'N/A'} · ${item.source || ''}</p>
+                    <p class="news-content" style="font-size: 0.875rem; color: #4b5563; line-height: 1.6; margin-bottom: 8px;">${item.content}</p>
+                    <a href="${item.link}" target="_blank" style="font-size: 0.7rem; color: #4285f4; text-decoration: none; font-weight: 500; word-break: break-all;">🔗 ${item.link}</a>
+                  </div>
+                </div>
+              `;
+          }).join('')}
+            </div>
+          `;
+          containerEl.innerHTML += siteHTML;
+        }
+
+        addLog(`google-${i}`, category.name, `Found ${data.items.length} items`, 'success');
+      }
+    } catch (e: any) {
+      addLog(`google-${i}-err`, category.name, `Error: ${e.message}`, 'error');
+    }
+  }
+
+  // Store globally for blog generation
+  (window as any).scrapedNewsItems = allItems;
+
+  autoStatusText.textContent = `✅ Google 검색 완료: ${allItems.length}개 발견!`;
+  addLog('google-done', 'Google Search', `Total: ${allItems.length} items!`, 'success');
+
+  // Attach event listeners
+  setTimeout(() => {
+    const selectAllBtn = document.getElementById('select-all-news-btn');
+    const deselectAllBtn = document.getElementById('deselect-all-news-btn');
+    const checkboxes = document.querySelectorAll('.news-checkbox') as NodeListOf<HTMLInputElement>;
+
+    selectAllBtn?.addEventListener('click', () => {
+      checkboxes.forEach(cb => {
+        cb.checked = true;
+        const parent = cb.closest('.news-item') as HTMLElement;
+        if (parent) parent.style.borderColor = '#4285f4';
+      });
+    });
+
+    deselectAllBtn?.addEventListener('click', () => {
+      checkboxes.forEach(cb => {
+        cb.checked = false;
+        const parent = cb.closest('.news-item') as HTMLElement;
+        if (parent) parent.style.borderColor = '#bfdbfe';
+      });
+    });
+
+    checkboxes.forEach(cb => {
+      cb.addEventListener('change', () => {
+        const parent = cb.closest('.news-item') as HTMLElement;
+        if (parent) parent.style.borderColor = cb.checked ? '#4285f4' : '#bfdbfe';
+      });
+    });
+
+    // Attach translate button handler
+    attachTranslateHandler();
+  }, 100);
+}
+
 // Header "네이버 검색" Button Logic
 const naverSearchBtn = document.getElementById('naver-search-btn') as HTMLButtonElement;
 if (naverSearchBtn) {
@@ -798,30 +1205,23 @@ if (naverSearchBtn) {
 
 // Naver Search Function - searches Korean news sources
 async function runNaverSearch() {
-  // Get keyword from settings
+  // Get keyword from settings (optional now)
   const keywordInput = document.getElementById('auto-keyword-input') as HTMLInputElement;
   const autoStatusText = document.getElementById('auto-status-text') as HTMLElement;
   let keyword = keywordInput?.value.trim() || '';
 
-  // Prompt for keyword if empty
-  if (!keyword) {
-    keyword = prompt('검색할 키워드를 입력하세요 (예: AI, 건강, 시니어):') || '';
-  }
-  if (!keyword) {
-    addLog('naver-err', 'Error', 'No keyword provided', 'error');
+  // Get Korean news sources from settings
+  const naverSources = getNaverSources();
+
+  if (naverSources.length === 0) {
+    addLog('naver-err', 'Error', '네이버 검색 소스가 없습니다. 설정에서 추가해주세요.', 'error');
     return;
   }
 
-  // Predefined Korean news sources
-  const naverSources = [
-    { name: '네이버IT뉴스', url: 'https://news.naver.com/section/105', category: 'IT' },
-    { name: '네이버건강', url: 'https://health.naver.com', category: '건강' },
-    { name: '시니어조선', url: 'https://senior.chosun.com', category: '시니어' },
-    { name: '정책브리핑', url: 'https://www.korea.kr', category: '행정' }
-  ];
-
-  autoStatusText.textContent = `🔍 네이버 검색: "${keyword}"...`;
-  addLog('naver', 'Naver Search', `Searching ${naverSources.length} Korean sources for "${keyword}"...`, 'success');
+  // Status message based on whether keyword is provided
+  const searchLabel = keyword ? `"${keyword}"` : '인기 뉴스';
+  autoStatusText.textContent = `🔍 네이버 검색: ${searchLabel}...`;
+  addLog('naver', 'Naver Search', `Searching ${naverSources.length} Korean sources for ${searchLabel}...`, 'success');
 
   const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
   const allItems: { site: string; title: string; content: string; link: string; date: string; category: string }[] = [];
@@ -835,7 +1235,7 @@ async function runNaverSearch() {
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; flex-wrap: wrap; gap: 12px;">
           <h2 style="font-size: 1.5rem; font-weight: 900; color: #166534; display: flex; align-items: center; gap: 8px; margin: 0;">
             <span style="background: #22c55e; color: white; padding: 4px 10px; border-radius: 8px; font-size: 1rem;">N</span>
-            네이버 검색 결과 <span style="font-size: 0.875rem; font-weight: 500; color: #4ade80;">(${keyword} · ${new Date().toLocaleDateString('ko-KR')})</span>
+            네이버 검색 결과 <span style="font-size: 0.875rem; font-weight: 500; color: #4ade80;">(${searchLabel} · ${new Date().toLocaleDateString('ko-KR')})</span>
           </h2>
           <div style="display: flex; gap: 8px; flex-wrap: wrap;">
             <button id="select-all-news-btn" style="padding: 8px 12px; background: #f3f4f6; border: 1px solid #d1d5db; border-radius: 8px; font-size: 0.75rem; font-weight: 600; cursor: pointer;">☑️ 전체 선택</button>
@@ -858,25 +1258,31 @@ async function runNaverSearch() {
     autoStatusText.textContent = `📡 검색 중 ${i + 1}/${naverSources.length}: ${source.name}...`;
 
     try {
+      // Build search context: use keyword if provided, otherwise use category
+      const searchContext = keyword ? keyword : source.category;
+
       const prompt = `
         You are a Korean news data extraction API.
-        Search for the TOP 5 MOST POPULAR/TRENDING news articles related to "${keyword}" from this Korean source:
+        Search for the TOP 5 MOST POPULAR/TRENDING news articles from this Korean source:
         
         Source: ${source.name} (${source.url})
         Category: ${source.category}
+        ${keyword ? `Search Topic: "${keyword}"` : `Search for: 오늘의 인기 뉴스 (Today's trending news) in ${source.category} category`}
 
         IMPORTANT:
-        - Find articles that are ACTUALLY from Korean news sources.
-        - Prioritize articles with HIGH view counts, comments, or shares.
+        - Find the MOST VIEWED, MOST COMMENTED, or MOST SHARED articles.
+        - Sort by POPULARITY (히트 수, 조회수, 인기순).
+        - Articles should be RECENT (within last 7 days if possible).
         - Include the publish date for each article.
         - Content summary should be in Korean.
+        - Return exactly 5 items.
 
         Output: STRICT RAW JSON ONLY. No markdown.
 
         JSON Schema:
         {
             "items": [
-                { "title": "제목", "date": "YYYY-MM-DD", "content": "1-2문장 요약", "link": "https://..." }
+                { "title": "제목", "date": "YYYY-MM-DD", "content": "1-2문장 요약", "link": "https://...", "hits": "조회수 또는 인기도 (예: 1만회, 인기)" }
             ]
         }
       `;
@@ -975,6 +1381,9 @@ async function runNaverSearch() {
         if (parent) parent.style.borderColor = cb.checked ? '#22c55e' : '#bbf7d0';
       });
     });
+
+    // Attach translate button handler
+    attachTranslateHandler();
   }, 100);
 }
 
