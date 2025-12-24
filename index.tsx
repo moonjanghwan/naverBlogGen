@@ -19,39 +19,61 @@ const genImageBtn = document.getElementById('gen-image-btn') as HTMLButtonElemen
 
 // Tab-based canvases
 const newsCanvas = document.getElementById('news-canvas') as HTMLElement;
+const googleCanvas = document.getElementById('google-canvas') as HTMLElement;
+const naverCanvas = document.getElementById('naver-canvas') as HTMLElement;
 const blogCanvas = document.getElementById('blog-canvas') as HTMLElement;
 const editorCanvas = blogCanvas; // Backward compatibility alias
+
 const tabNews = document.getElementById('tab-news') as HTMLButtonElement;
+const tabGoogle = document.getElementById('tab-google') as HTMLButtonElement;
+const tabNaver = document.getElementById('tab-naver') as HTMLButtonElement;
 const tabBlog = document.getElementById('tab-blog') as HTMLButtonElement;
 
 // Tab switching function
-function switchToTab(tab: 'news' | 'blog') {
+function switchToTab(tab: 'news' | 'google' | 'naver' | 'blog') {
+  // Hide all
+  newsCanvas?.classList.add('hidden');
+  googleCanvas?.classList.add('hidden');
+  naverCanvas?.classList.add('hidden');
+  blogCanvas?.classList.add('hidden');
+
+  // Deactivate all tabs
+  [tabNews, tabGoogle, tabNaver, tabBlog].forEach(t => {
+    t?.classList.remove('text-emerald-600', 'border-emerald-500', 'bg-white', 'text-indigo-600', 'border-indigo-500', 'active', 'text-blue-600', 'border-blue-500', 'text-green-600', 'border-green-500');
+    t?.classList.add('text-gray-400', 'border-transparent');
+  });
+
+  // Show Active
   if (tab === 'news') {
     newsCanvas?.classList.remove('hidden');
-    blogCanvas?.classList.add('hidden');
     tabNews?.classList.add('text-emerald-600', 'border-emerald-500', 'bg-white');
     tabNews?.classList.remove('text-gray-400', 'border-transparent');
-    tabBlog?.classList.remove('text-indigo-600', 'border-indigo-500', 'bg-white');
-    tabBlog?.classList.add('text-gray-400', 'border-transparent');
-  } else {
+  } else if (tab === 'google') {
+    googleCanvas?.classList.remove('hidden');
+    tabGoogle?.classList.add('text-blue-600', 'border-blue-500', 'bg-white');
+    tabGoogle?.classList.remove('text-gray-400', 'border-transparent');
+  } else if (tab === 'naver') {
+    naverCanvas?.classList.remove('hidden');
+    tabNaver?.classList.add('text-green-600', 'border-green-500', 'bg-white');
+    tabNaver?.classList.remove('text-gray-400', 'border-transparent');
+  } else if (tab === 'blog') {
     blogCanvas?.classList.remove('hidden');
-    newsCanvas?.classList.add('hidden');
     tabBlog?.classList.add('text-indigo-600', 'border-indigo-500', 'bg-white');
     tabBlog?.classList.remove('text-gray-400', 'border-transparent');
-    tabNews?.classList.remove('text-emerald-600', 'border-emerald-500', 'bg-white');
-    tabNews?.classList.add('text-gray-400', 'border-transparent');
   }
 }
 
 // Tab click handlers
 tabNews?.addEventListener('click', () => switchToTab('news'));
+tabGoogle?.addEventListener('click', () => switchToTab('google'));
+tabNaver?.addEventListener('click', () => switchToTab('naver'));
 tabBlog?.addEventListener('click', () => switchToTab('blog'));
 
 marked.setOptions({
   breaks: true,
   gfm: true,
-  headerIds: false,
-  mangle: false
+
+
 });
 
 // Global State
@@ -69,8 +91,113 @@ const STORAGE_KEYS = {
   AUTO_SITES: 'gemini_auto_sites',
   AUTO_KEYWORDS: 'gemini_auto_keywords',
   AUTO_WEBHOOK: 'gemini_auto_webhook',
-  AUTO_SHEET_NAME_SAVE: 'gemini_auto_sheet_name_save'
+  AUTO_SHEET_NAME_SAVE: 'gemini_auto_sheet_name_save',
+  NEWS_HTML: 'gemini_news_html',
+  GOOGLE_HTML: 'gemini_google_html',
+  NAVER_HTML: 'gemini_naver_html',
+  NEWS_DATA: 'gemini_news_data',
+  GOOGLE_DATA: 'gemini_google_data',
+  NAVER_DATA: 'gemini_naver_data',
+  BLOG_HTML: 'gemini_blog_html'
 };
+
+// State Management Functions
+function saveAppState() {
+  if (newsCanvas) localStorage.setItem(STORAGE_KEYS.NEWS_HTML, newsCanvas.innerHTML);
+  if (googleCanvas) localStorage.setItem(STORAGE_KEYS.GOOGLE_HTML, googleCanvas.innerHTML);
+  if (naverCanvas) localStorage.setItem(STORAGE_KEYS.NAVER_HTML, naverCanvas.innerHTML);
+
+  if ((window as any).scraperItems) localStorage.setItem(STORAGE_KEYS.NEWS_DATA, JSON.stringify((window as any).scraperItems));
+  if ((window as any).googleItems) localStorage.setItem(STORAGE_KEYS.GOOGLE_DATA, JSON.stringify((window as any).googleItems));
+  if ((window as any).naverItems) localStorage.setItem(STORAGE_KEYS.NAVER_DATA, JSON.stringify((window as any).naverItems));
+
+  if (blogCanvas) localStorage.setItem(STORAGE_KEYS.BLOG_HTML, blogCanvas.innerHTML);
+}
+
+function restoreAppState() {
+  const newsHtml = localStorage.getItem(STORAGE_KEYS.NEWS_HTML);
+  const googleHtml = localStorage.getItem(STORAGE_KEYS.GOOGLE_HTML);
+  const naverHtml = localStorage.getItem(STORAGE_KEYS.NAVER_HTML);
+
+  const newsData = localStorage.getItem(STORAGE_KEYS.NEWS_DATA);
+  const googleData = localStorage.getItem(STORAGE_KEYS.GOOGLE_DATA);
+  const naverData = localStorage.getItem(STORAGE_KEYS.NAVER_DATA);
+  const blogHtml = localStorage.getItem(STORAGE_KEYS.BLOG_HTML);
+
+  // Restore Data First
+  if (newsData) (window as any).scraperItems = JSON.parse(newsData);
+  if (googleData) (window as any).googleItems = JSON.parse(googleData);
+  if (naverData) (window as any).naverItems = JSON.parse(naverData);
+
+  // Default active items to news/scraper items if available, else empty
+  // Ideally we should switch context based on active tab, but for now just load them.
+  if ((window as any).scraperItems) (window as any).scrapedNewsItems = (window as any).scraperItems;
+
+  // Helper to re-attach listeners
+  const reattachListeners = (containerId: string, prefix: string, activeColor: string, defaultColor: string, itemsSource: any[]) => {
+    const containerEl = document.getElementById(containerId);
+    if (containerEl) {
+      const selectAllBtn = document.getElementById(`select-all-${prefix}-btn`);
+      const deselectAllBtn = document.getElementById(`deselect-all-${prefix}-btn`);
+
+      selectAllBtn?.addEventListener('click', () => {
+        const checkboxes = containerEl.querySelectorAll('.news-checkbox') as NodeListOf<HTMLInputElement>;
+        checkboxes.forEach(cb => {
+          cb.checked = true;
+          const parent = cb.closest('.news-item') as HTMLElement;
+          if (parent) parent.style.borderColor = activeColor;
+        });
+      });
+
+      deselectAllBtn?.addEventListener('click', () => {
+        const checkboxes = containerEl.querySelectorAll('.news-checkbox') as NodeListOf<HTMLInputElement>;
+        checkboxes.forEach(cb => {
+          cb.checked = false;
+          const parent = cb.closest('.news-item') as HTMLElement;
+          if (parent) parent.style.borderColor = defaultColor;
+        });
+      });
+
+      containerEl.addEventListener('change', (e) => {
+        const target = e.target as HTMLInputElement;
+        if (target && target.classList.contains('news-checkbox')) {
+          const parent = target.closest('.news-item') as HTMLElement;
+          if (parent) parent.style.borderColor = target.checked ? activeColor : defaultColor;
+        }
+      });
+
+      // Re-attach translate using the correct items source
+      attachTranslateHandler(`translate-${prefix}-btn`, itemsSource, prefix);
+    }
+  };
+
+  if (newsHtml && newsCanvas) {
+    newsCanvas.innerHTML = newsHtml;
+    reattachListeners('news-results-container', 'news', '#10b981', '#e5e7eb', (window as any).scraperItems);
+  }
+
+  if (googleHtml && googleCanvas) {
+    googleCanvas.innerHTML = googleHtml;
+    reattachListeners('google-results-container', 'google', '#4285f4', '#bfdbfe', (window as any).googleItems);
+  }
+
+  if (naverHtml && naverCanvas) {
+    naverCanvas.innerHTML = naverHtml;
+    reattachListeners('naver-results-container', 'naver', '#22c55e', '#bbf7d0', (window as any).naverItems);
+  }
+
+  if (blogHtml && blogCanvas) {
+    blogCanvas.innerHTML = blogHtml;
+    // Re-attach listeners for blog if any
+  }
+}
+
+// Auto-save on blog edit (simple debounce)
+let blogSaveTimeout: any;
+blogCanvas?.addEventListener('input', () => {
+  clearTimeout(blogSaveTimeout);
+  blogSaveTimeout = setTimeout(saveAppState, 1000);
+});
 
 /**
  * Updates the global progress indicator and status text.
@@ -91,17 +218,84 @@ function setGlobalStatus(isLoading: boolean, text: string = "") {
 }
 
 /**
- * Adds a log entry to the status container.
+ * Sets a button to a loading state.
  */
-function addLog(id: string, title: string, message: string, type: 'success' | 'error') {
-  const logDiv = document.createElement('div');
-  logDiv.id = id;
-  logDiv.className = `p-3 rounded-xl text-xs mb-2 border ${type === 'success' ? 'bg-green-50 text-green-700 border-green-100' : 'bg-red-50 text-red-700 border-red-100'
-    }`;
-  logDiv.innerHTML = `<strong>[${title}]</strong> ${message}`;
-  statusContainer.appendChild(logDiv);
-  statusContainer.scrollTop = statusContainer.scrollHeight;
+function setButtonLoading(btn: HTMLButtonElement | null, isLoading: boolean, loadingText: string = "Working...") {
+  if (!btn) return;
+  if (isLoading) {
+    if (!btn.dataset.originalText) {
+      btn.dataset.originalText = btn.innerHTML;
+    }
+    btn.innerHTML = `<svg class="animate-spin h-4 w-4 inline mr-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg> ${loadingText}`;
+    btn.disabled = true;
+    btn.classList.add('opacity-75', 'cursor-not-allowed');
+  } else {
+    btn.innerHTML = btn.dataset.originalText || btn.innerHTML;
+    btn.disabled = false;
+    btn.classList.remove('opacity-75', 'cursor-not-allowed');
+  }
 }
+
+
+const messageWindow = document.getElementById('message-window') as HTMLElement;
+let isMessageWindowInitialized = false;
+
+/**
+ * Adds a log entry to the unified message window.
+ */
+function addLog(id: string, title: string, message: string, type: 'success' | 'error' | 'info' | 'result') {
+  if (!messageWindow) return;
+
+  // Clear initial placeholder if first message
+  if (!isMessageWindowInitialized) {
+    messageWindow.innerHTML = '';
+    isMessageWindowInitialized = true;
+  }
+
+  // Create message bubble
+  const msgDiv = document.createElement('div');
+  msgDiv.id = id;
+  msgDiv.className = `p-3 rounded-xl text-xs mb-2 border animate-fadeIn ${type === 'success' ? 'bg-indigo-50 text-indigo-700 border-indigo-100' :
+    type === 'error' ? 'bg-red-50 text-red-700 border-red-100' :
+      type === 'result' ? 'bg-white border-2 border-emerald-400 shadow-md' : // Highlight results
+        'bg-gray-50 text-gray-600 border-gray-200'
+    }`;
+
+  // Use different icon based on type
+  const icon = type === 'success' ? '✅' : type === 'error' ? '❌' : type === 'result' ? '🎉' : 'ℹ️';
+
+  // For results, we might want special formatting
+  if (type === 'result') {
+    msgDiv.innerHTML = `
+        <div class="flex items-start gap-2">
+            <span class="text-lg">${icon}</span>
+            <div class="flex-1">
+                <div class="font-bold text-emerald-700 mb-1">${title}</div>
+                <div class="text-gray-600 mb-2">${message}</div>
+                <div class="flex gap-1 justify-end">
+                    <span class="text-[9px] bg-emerald-100 text-emerald-600 px-2 py-1 rounded-full font-bold">생성 완료</span>
+                </div>
+            </div>
+        </div>
+      `;
+  } else {
+    msgDiv.innerHTML = `
+        <div class="flex items-start gap-2">
+            <span>${icon}</span>
+            <div>
+                <span class="font-bold block mb-0.5">${title}</span>
+                <span class="opacity-90 leading-relaxed">${message}</span>
+            </div>
+        </div>
+      `;
+  }
+
+  messageWindow.appendChild(msgDiv);
+  // Auto-scroll to bottom
+  messageWindow.scrollTop = messageWindow.scrollHeight;
+}
+
+
 
 /**
  * Extracts the spreadsheet ID from a Google Sheets URL.
@@ -177,7 +371,7 @@ function processAIOutputToHtml(rawText: string): string {
   cleaned = cleaned.replace(/\[\[\s*TAGS\s*:\s*(.*?)\s*\]\]/gi, '');
 
   // 4. HTML 파싱 (marked를 거치더라도 이미 기호가 제거된 상태)
-  let html = marked.parse(cleaned);
+  let html = marked.parse(cleaned) as string;
 
   // 5. 이미지 프롬프트 변환
   const pattern = /\[\[\s*IMAGE_PROMPT\s*:\s*(.*?)\s*\]\]/gi;
@@ -313,50 +507,13 @@ async function addToAccumulatedDoc(title: string, articleData: { text: string, p
     selected: true
   });
 
-  // Update sidebar Generated Posts list
-  updateGeneratedPostsList();
-
-  addLog(`accum-${Date.now()}`, title, `원고 생성 완료 (마크다운 정제됨)`, 'success');
+  addLog(`accum-${Date.now()}`, title, `블로그 글 생성이 완료되었습니다.`, 'result');
 }
 
 // Function to update the Generated Posts list in sidebar (RADIO - single select)
 function updateGeneratedPostsList() {
   const posts = (window as any).generatedBlogPosts || [];
-  const container = document.getElementById('generated-posts-list');
-
-  if (!container) return;
-
-  if (posts.length === 0) {
-    container.innerHTML = '<p class="text-[10px] text-gray-400 italic">생성된 글이 없습니다</p>';
-    return;
-  }
-
-  // Ensure at least one is selected (default to last)
-  if (!posts.find((p: any) => p.selected)) {
-    posts[posts.length - 1].selected = true;
-  }
-
-  container.innerHTML = posts.map((post: any, idx: number) => `
-    <div class="flex items-center gap-2 p-2 ${post.selected ? 'bg-emerald-50 border border-emerald-200' : 'bg-gray-50'} rounded-lg cursor-pointer generated-post-item" data-post-id="${post.id}">
-      <input type="radio" name="generated-post-select" class="generated-post-radio" data-post-id="${post.id}" ${post.selected ? 'checked' : ''} 
-        style="width: 14px; height: 14px; cursor: pointer; accent-color: #10b981;">
-      <span class="text-[11px] ${post.selected ? 'text-emerald-700 font-bold' : 'text-gray-700'} truncate flex-1" title="${post.title}">${idx + 1}. ${post.title.substring(0, 25)}${post.title.length > 25 ? '...' : ''}</span>
-    </div>
-  `).join('');
-
-  // Attach click listeners for single selection
-  container.querySelectorAll('.generated-post-item').forEach(item => {
-    item.addEventListener('click', () => {
-      const postId = (item as HTMLElement).getAttribute('data-post-id');
-      // Deselect all
-      posts.forEach((p: any) => p.selected = false);
-      // Select clicked one
-      const post = posts.find((p: any) => p.id === postId);
-      if (post) post.selected = true;
-      // Re-render
-      updateGeneratedPostsList();
-    });
-  });
+  if (posts.length === 0) return;
 }
 
 genImageBtn.onclick = async () => {
@@ -364,9 +521,7 @@ genImageBtn.onclick = async () => {
   const pendingBoxes = Array.from(boxes).filter(box => !box.querySelector('img'));
   if (pendingBoxes.length === 0) return alert("생성할 이미지가 없습니다.");
 
-  const originalText = genImageBtn.innerHTML;
-  genImageBtn.innerHTML = `<svg class="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg> 생성중...`;
-  genImageBtn.disabled = true;
+  setButtonLoading(genImageBtn, true, "생성중...");
 
   for (let box of pendingBoxes) {
     const prompt = (box as HTMLElement).getAttribute('data-prompt');
@@ -376,8 +531,7 @@ genImageBtn.onclick = async () => {
     }
   }
 
-  genImageBtn.innerHTML = originalText;
-  genImageBtn.disabled = false;
+  setButtonLoading(genImageBtn, false);
   setGlobalStatus(false);
 };
 
@@ -391,12 +545,14 @@ async function generateImageWithPrompt(box: HTMLElement, promptText: string, aut
     resultArea.classList.remove('hidden');
 
     const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-    const modelName = (document.getElementById('image-model-select') as HTMLSelectElement).value;
+    // Fix: Use correct ID matching HTML
+    const modelSelect = document.getElementById('image-model') as HTMLSelectElement;
+    const modelName = modelSelect ? modelSelect.value : "gemini-2.5-flash-image";
 
     const response = await ai.models.generateContent({
       model: modelName,
       contents: { parts: [{ text: promptText }] },
-      config: { imageConfig: { aspectRatio: "1:1" } }
+      config: { imageConfig: { aspectRatio: "1:1" } } as any
     });
 
     let imageUrl = "";
@@ -597,8 +753,13 @@ clearPostsBtn?.addEventListener('click', () => {
   (window as any).generatedBlogPosts = [];
   accumulatedHtml = '';
   editorCanvas.innerHTML = '';
-  updateGeneratedPostsList();
-  addLog('clear', 'Posts', 'Generated posts cleared', 'success');
+
+  if (messageWindow) {
+    messageWindow.innerHTML = '<div class="text-center py-8 text-gray-300 text-xs"><p>작업 대기 중...</p></div>';
+    isMessageWindowInitialized = false;
+  }
+
+  addLog('clear', 'System', '모든 기록이 초기화되었습니다.', 'info');
 });
 
 
@@ -607,40 +768,56 @@ runManualBtn.onclick = async () => {
   const title = manualTitleInput.value.trim();
   const url = manualUrlInput.value.trim();
   if (!title) return;
-  runManualBtn.disabled = true;
+
+  setButtonLoading(runManualBtn, true, "원고 생성 중...");
   setGlobalStatus(true, "원고 생성 중...");
+
   try {
     const articleData = await generateArticle(title, "", url);
     await addToAccumulatedDoc(title, articleData);
   } catch (e: any) {
     addLog("err", "오류", e.message, 'error');
   } finally {
-    runManualBtn.disabled = false;
+    setButtonLoading(runManualBtn, false);
     setGlobalStatus(false);
   }
 };
 
 runAutomationBtn.onclick = async () => {
-  const originalText = runAutomationBtn.innerHTML;
+  // Determine active tab/canvas and corresponding data
+  let activeCanvas: HTMLElement | null = null;
+  let activeItems: any[] = [];
 
-  // Check for selected news items in canvas first
-  const selectedCheckboxes = document.querySelectorAll('.news-checkbox:checked') as NodeListOf<HTMLInputElement>;
-  const scrapedItems = (window as any).scrapedNewsItems || [];
+  if (googleCanvas && !googleCanvas.classList.contains('hidden')) {
+    activeCanvas = googleCanvas;
+    activeItems = (window as any).googleItems || [];
+  } else if (naverCanvas && !naverCanvas.classList.contains('hidden')) {
+    activeCanvas = naverCanvas;
+    activeItems = (window as any).naverItems || [];
+  } else if (newsCanvas && !newsCanvas.classList.contains('hidden')) {
+    activeCanvas = newsCanvas;
+    activeItems = (window as any).scraperItems || [];
+  }
+
+  // Check for selected news items in ACTIVE canvas only
+  const selectedCheckboxes = activeCanvas ? activeCanvas.querySelectorAll('.news-checkbox:checked') as NodeListOf<HTMLInputElement> : [] as unknown as NodeListOf<HTMLInputElement>;
+
+  // Fallback: If no active logic, try legacy scrapedNewsItems (but this is risky with multiple tabs)
+  // const scrapedItems = (window as any).scrapedNewsItems || []; 
 
   // If items are selected in canvas, use those
-  if (selectedCheckboxes.length > 0 && scrapedItems.length > 0) {
+  if (selectedCheckboxes.length > 0 && activeItems.length > 0) {
     const selectedItems = Array.from(selectedCheckboxes).map(cb => {
       const itemId = parseInt(cb.getAttribute('data-item-id') || '0');
-      return scrapedItems[itemId];
+      return activeItems[itemId];
     }).filter(Boolean);
 
     if (selectedItems.length === 0) {
-      addLog('err', 'Error', 'No valid items selected', 'error');
+      addLog('err', 'Error', 'No valid items selected from active tab', 'error');
       return;
     }
 
-    runAutomationBtn.innerHTML = `<svg class="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg> 블로그 생성중...`;
-    runAutomationBtn.disabled = true;
+    setButtonLoading(runAutomationBtn, true, "블로그 생성중...");
     statusContainer.innerHTML = '';
     addLog('blog', 'Blog Generator', `Generating blog content for ${selectedItems.length} selected items...`, 'success');
 
@@ -655,20 +832,12 @@ runAutomationBtn.onclick = async () => {
     } catch (e: any) {
       addLog('err', 'Error', e.message, 'error');
     } finally {
-      runAutomationBtn.innerHTML = originalText;
-      runAutomationBtn.disabled = false;
+      setButtonLoading(runAutomationBtn, false);
       setGlobalStatus(false);
     }
     return;
   }
 
-  // Fallback: Original behavior - fetch from Google Sheet using Settings values
-  const url = autoWebhookInput?.value.trim() || '';
-  const name = autoSheetNameSaveInput?.value.trim() || 'Sheet1';
-  if (!url) {
-    addLog('info', 'Info', '뉴스를 선택하거나, 설정에서 Webhook URL을 입력하세요.', 'error');
-    return;
-  }
   // Note: The fallback is for fetching from a sheet that was already saved
   // This is less common now that we have direct canvas selection
   addLog('info', 'Info', '캔버스에서 뉴스를 선택해주세요. 뉴스 검색 후 체크박스를 선택하세요.', 'error');
@@ -740,7 +909,7 @@ initPersistence();
 const settingsTriggerBtn = document.getElementById('settings-trigger-btn') as HTMLButtonElement;
 const closeSettingsBtn = document.getElementById('close-settings-btn') as HTMLButtonElement;
 const settingsModal = document.getElementById('settings-modal') as HTMLElement;
-const manualTriggerBtn = document.getElementById('manual-trigger-btn') as HTMLButtonElement;
+// const manualTriggerBtn = document.getElementById('manual-trigger-btn') as HTMLButtonElement; // REMOVED
 const resetSitesBtn = document.getElementById('reset-sites-btn') as HTMLButtonElement;
 const siteListContainer = document.getElementById('site-list-container') as HTMLElement;
 const newSiteName = document.getElementById('new-site-name') as HTMLInputElement;
@@ -753,13 +922,13 @@ const closeResultsBtn = document.getElementById('close-results-btn') as HTMLButt
 const insertResultsBtn = document.getElementById('insert-results-btn') as HTMLButtonElement;
 const resultsMeta = document.getElementById('results-meta') as HTMLElement;
 
-const autoTimeHour = document.getElementById('auto-time-hour') as HTMLSelectElement;
-const autoTimeMinute = document.getElementById('auto-time-minute') as HTMLSelectElement;
+// const autoTimeHour = document.getElementById('auto-time-hour') as HTMLSelectElement;
+// const autoTimeMinute = document.getElementById('auto-time-minute') as HTMLSelectElement;
 const autoSitesInput = document.getElementById('auto-sites-input') as HTMLTextAreaElement; // Changed to Textarea
 const autoKeywordInput = document.getElementById('auto-keyword-input') as HTMLInputElement;
-const autoWebhookInput = document.getElementById('auto-webhook-input') as HTMLInputElement;
-const autoSheetNameSaveInput = document.getElementById('auto-sheet-name-save-input') as HTMLInputElement;
-const toggleAutomationBtn = document.getElementById('toggle-automation-btn') as HTMLButtonElement;
+// const autoWebhookInput = document.getElementById('auto-webhook-input') as HTMLInputElement;
+// const autoSheetNameSaveInput = document.getElementById('auto-sheet-name-save-input') as HTMLInputElement;
+// const toggleAutomationBtn = document.getElementById('toggle-automation-btn') as HTMLButtonElement;
 const autoStatusText = document.getElementById('auto-status-text') as HTMLElement;
 
 // Default RSS List
@@ -780,16 +949,18 @@ artificial intelligence - Google News https://news.google.com/news/rss/search/se
 Artificial intelligence (AI) | The Guardian https://www.guardian.co.uk/technology/artificialintelligenceai/rss`;
 
 // Reusable translate handler function for all search types
-function attachTranslateHandler() {
-  const translateBtn = document.getElementById('translate-news-btn');
+function attachTranslateHandler(btnId: string = 'translate-news-btn', itemsSource: any[] | null = null, containerPrefix: string = 'news') {
+  const translateBtn = document.getElementById(btnId);
   if (!translateBtn) return;
 
-  // Remove existing listener by cloning
+  // Clone to remove old listeners
   const newBtn = translateBtn.cloneNode(true) as HTMLElement;
   translateBtn.parentNode?.replaceChild(newBtn, translateBtn);
 
   newBtn.addEventListener('click', async () => {
-    const items = (window as any).scrapedNewsItems || [];
+    // Determine active items
+    const items = itemsSource || (window as any).scrapedNewsItems || [];
+
     if (items.length === 0) {
       alert('번역할 뉴스가 없습니다.');
       return;
@@ -800,16 +971,14 @@ function attachTranslateHandler() {
 
     try {
       const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-
+      // Only translate title/content, keep others
       const prompt = `
-        Translate the following news items to Korean. Keep the same structure.
-        Return STRICT JSON ONLY, no markdown:
+        Translate the following news items to Korean. Keep everything else.
+        Return STRICT JSON ONLY, no markdown.
+        Schema: { "translations": [{ "index": index, "title": "...", "content": "..." }] }
         
-        Items to translate:
-        ${JSON.stringify(items.map((i: any) => ({ title: i.title, content: i.content })))}
-        
-        Output format:
-        { "translations": [{ "title": "한국어 제목", "content": "한국어 내용" }, ...] }
+        Items to translate (only title/content needed):
+        ${JSON.stringify(items.map((i: any, idx: number) => ({ index: idx, title: i.title, content: i.content })))}
       `;
 
       const response = await ai.models.generateContent({
@@ -820,44 +989,160 @@ function attachTranslateHandler() {
       const text = response.text || "";
       const startIdx = text.indexOf('{');
       const endIdx = text.lastIndexOf('}');
-
       if (startIdx !== -1 && endIdx !== -1) {
-        const jsonStr = text.substring(startIdx, endIdx + 1);
-        const data = JSON.parse(jsonStr);
+        const data = JSON.parse(text.substring(startIdx, endIdx + 1));
 
-        // Update DOM with translations
-        data.translations.forEach((trans: any, idx: number) => {
-          const itemEl = document.querySelector(`.news-item[data-item-id="${idx}"]`);
+        // Update DOM
+        // Need to know WHICH properties to update. Using prefix might help if we scoped selectors
+        // But currently news-item data-item-id is global index often. 
+        // Actually, with separated tabs, data-item-id will be 0-based index relative to THAT list.
+        // So we need to target the SPECIFIC container for this tab.
+        // Assuming unique IDs for containers:
+        let containerSelector = '#news-results-container';
+        if (containerPrefix === 'google') containerSelector = '#google-results-container';
+        if (containerPrefix === 'naver') containerSelector = '#naver-results-container';
+
+        const container = document.querySelector(containerSelector);
+
+        data.translations.forEach((trans: any) => {
+          const idx = trans.index;
+          // Find item within this container only
+          const itemEl = container?.querySelector(`.news-item[data-item-id="${idx}"]`);
           if (itemEl) {
-            const titleEl = itemEl.querySelector('.news-title');
-            const contentEl = itemEl.querySelector('.news-content');
-            if (titleEl) titleEl.textContent = trans.title;
-            if (contentEl) contentEl.textContent = trans.content;
+            const tEl = itemEl.querySelector('.news-title');
+            const cEl = itemEl.querySelector('.news-content');
+            if (tEl) tEl.textContent = trans.title;
+            if (cEl) cEl.textContent = trans.content;
           }
-        });
-
-        // Update global items with translations
-        data.translations.forEach((trans: any, idx: number) => {
+          // Update data source
           if (items[idx]) {
             items[idx].title = trans.title;
             items[idx].content = trans.content;
           }
         });
 
-        addLog('translate', 'Translation', `${data.translations.length} items translated!`, 'success');
+        addLog('translate', 'Translation', `${data.translations.length} items translated`, 'success');
         newBtn.innerHTML = '✅ 번역 완료';
       }
     } catch (e: any) {
-      addLog('translate-err', 'Translation Error', e.message, 'error');
-      newBtn.innerHTML = '❌ 오류 발생';
+      addLog('trans-err', 'Error', e.message, 'error');
+      newBtn.innerHTML = '❌ 오류';
     }
-
     setTimeout(() => {
       newBtn.innerHTML = '🌐 번역하기';
       (newBtn as HTMLButtonElement).disabled = false;
     }, 2000);
   });
 }
+// Default Google Sources (Search Queries)
+const DEFAULT_GOOGLE_SOURCES = [
+  { name: '과학기술', query: 'science technology Korea' },
+  { name: '건강', query: 'health wellness Korea' },
+  { name: '경제', query: 'economy business Korea' },
+  { name: '시니어', query: 'senior elderly Korea' },
+  { name: '여행', query: 'travel tourism Korea' },
+  { name: '정치', query: 'politics Korea' }
+];
+
+const GOOGLE_SOURCES_KEY = 'google_search_sources';
+
+// Google sources UI elements
+const googleSiteListContainer = document.getElementById('google-site-list-container') as HTMLElement;
+const newGoogleName = document.getElementById('new-google-name') as HTMLInputElement;
+const newGoogleQuery = document.getElementById('new-google-query') as HTMLInputElement;
+const addGoogleSiteBtn = document.getElementById('add-google-site-btn') as HTMLButtonElement;
+const resetGoogleSitesBtn = document.getElementById('reset-google-sites-btn') as HTMLButtonElement;
+
+// Get Google sources from localStorage or defaults
+function getGoogleSources(): { name: string; query: string }[] {
+  const saved = localStorage.getItem(GOOGLE_SOURCES_KEY);
+  if (saved) {
+    try {
+      return JSON.parse(saved);
+    } catch {
+      return [...DEFAULT_GOOGLE_SOURCES];
+    }
+  }
+  return [...DEFAULT_GOOGLE_SOURCES];
+}
+
+// Save Google sources to localStorage
+function saveGoogleSources(sources: { name: string; query: string }[]) {
+  localStorage.setItem(GOOGLE_SOURCES_KEY, JSON.stringify(sources));
+}
+
+// Render Google sources list
+function renderGoogleSourcesList() {
+  if (!googleSiteListContainer) return;
+
+  const sources = getGoogleSources();
+
+  if (sources.length === 0) {
+    googleSiteListContainer.innerHTML = '<li class="text-xs text-gray-400 italic p-2">소스가 없습니다. 추가해주세요.</li>';
+    return;
+  }
+
+  googleSiteListContainer.innerHTML = sources.map((source, idx) => `
+    <li class="flex items-center gap-2 bg-white border border-blue-100 rounded-lg p-2 group hover:border-blue-300 transition-colors">
+      <span class="bg-blue-100 text-blue-700 text-[10px] font-bold px-2 py-0.5 rounded">G</span>
+      <span class="text-xs font-bold text-gray-800 flex-1 truncate">${source.name}</span>
+      <span class="text-[10px] text-gray-400 truncate max-w-[150px]" title="${source.query}">${source.query}</span>
+      <button class="delete-google-site-btn opacity-0 group-hover:opacity-100 text-red-400 hover:text-red-600 transition-all" data-idx="${idx}">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+        </svg>
+      </button>
+    </li>
+  `).join('');
+
+  // Attach delete handlers
+  googleSiteListContainer.querySelectorAll('.delete-google-site-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const idx = parseInt(btn.getAttribute('data-idx') || '0');
+      const sources = getGoogleSources();
+      sources.splice(idx, 1);
+      saveGoogleSources(sources);
+      renderGoogleSourcesList();
+    });
+  });
+}
+
+// Add Google source handler
+if (addGoogleSiteBtn) {
+  addGoogleSiteBtn.onclick = () => {
+    const name = newGoogleName?.value.trim();
+    const query = newGoogleQuery?.value.trim();
+
+    if (!name || !query) {
+      alert('소스명과 검색어를 입력해주세요.');
+      return;
+    }
+
+    const sources = getGoogleSources();
+    sources.push({ name, query });
+    saveGoogleSources(sources);
+    renderGoogleSourcesList();
+
+    // Clear inputs
+    if (newGoogleName) newGoogleName.value = '';
+    if (newGoogleQuery) newGoogleQuery.value = '';
+  };
+}
+
+// Reset Google sources to defaults
+if (resetGoogleSitesBtn) {
+  resetGoogleSitesBtn.onclick = () => {
+    if (confirm('Google 검색 소스를 기본값으로 복원하시겠습니까?')) {
+      saveGoogleSources([...DEFAULT_GOOGLE_SOURCES]);
+      renderGoogleSourcesList();
+    }
+  };
+}
+
+// Initialize Google sources list on load
+renderGoogleSourcesList();
+restoreAppState();
+
 // Default Naver Sources (Korean news)
 const DEFAULT_NAVER_SOURCES = [
   { name: '네이버IT뉴스', url: 'https://news.naver.com/section/105', category: 'IT' },
@@ -981,14 +1266,9 @@ if (closeSettingsBtn && settingsModal) {
 const searchNewsBtn = document.getElementById('search-news-btn') as HTMLButtonElement;
 if (searchNewsBtn) {
   searchNewsBtn.onclick = async () => {
-    const originalText = searchNewsBtn.innerHTML;
-    searchNewsBtn.innerHTML = `<svg class="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg> 검색중...`;
-    searchNewsBtn.disabled = true;
-
+    setButtonLoading(searchNewsBtn, true, "검색중...");
     await runScraper();
-
-    searchNewsBtn.innerHTML = originalText;
-    searchNewsBtn.disabled = false;
+    setButtonLoading(searchNewsBtn, false);
   };
 }
 
@@ -996,88 +1276,120 @@ if (searchNewsBtn) {
 const googleSearchBtn = document.getElementById('google-search-btn') as HTMLButtonElement;
 if (googleSearchBtn) {
   googleSearchBtn.onclick = async () => {
-    const originalText = googleSearchBtn.innerHTML;
-    googleSearchBtn.innerHTML = `<svg class="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg> Google 검색중...`;
-    googleSearchBtn.disabled = true;
-
+    setButtonLoading(googleSearchBtn, true, "Google 검색중...");
     await runGoogleSearch();
-
-    googleSearchBtn.innerHTML = originalText;
-    googleSearchBtn.disabled = false;
+    setButtonLoading(googleSearchBtn, false);
   };
 }
 
 // Google Search Function - uses Gemini with Google Search grounding
-async function runGoogleSearch() {
+async function runGoogleSearch(autoSwitchTab: boolean = true) {
   const keywordInput = document.getElementById('auto-keyword-input') as HTMLInputElement;
   const autoStatusText = document.getElementById('auto-status-text') as HTMLElement;
   let keyword = keywordInput?.value.trim() || '';
 
-  // Korean news categories from news.google.com/kr
-  const categories = [
-    { name: '과학기술', query: 'science technology Korea' },
-    { name: '건강', query: 'health wellness Korea' },
-    { name: '경제', query: 'economy business Korea' },
-    { name: '시니어', query: 'senior elderly Korea' },
-    { name: '여행', query: 'travel tourism Korea' },
-    { name: '정치', query: 'politics Korea' }
-  ];
+  // Get dynamic Google sources
+  const categories = getGoogleSources();
+
+  if (categories.length === 0) {
+    addLog('google-err', 'Error', 'Google 검색 소스가 없습니다. 설정에서 추가해주세요.', 'error');
+    return;
+  }
+
   const searchLabel = keyword ? `"${keyword}"` : '한국 인기 뉴스';
 
-  autoStatusText.textContent = `🔍 Google 뉴스 검색: ${searchLabel}...`;
+  if (autoStatusText) {
+    autoStatusText.textContent = `🔍 Google 뉴스 검색: ${searchLabel}...`;
+  }
   addLog('google', 'Google News', `Searching ${categories.length} Korean categories for ${searchLabel}...`, 'success');
 
   const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
   const allItems: { site: string; title: string; content: string; link: string; date: string; category: string }[] = [];
 
-  // Switch to news tab and create container
-  switchToTab('news');
+  // Switch to google tab and create container
+  if (autoSwitchTab) switchToTab('google');
 
-  if (newsCanvas) {
+  let containerEl: HTMLElement | null = null;
+
+  if (googleCanvas) {
     const containerHTML = `
-      <div id="news-results-container" style="border: 2px solid #4285f4; border-radius: 16px; padding: 24px; margin-bottom: 24px; background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);">
+      <div id="google-results-container" style="border: 2px solid #4285f4; border-radius: 16px; padding: 24px; margin-bottom: 24px; background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; flex-wrap: wrap; gap: 12px;">
           <h2 style="font-size: 1.5rem; font-weight: 900; color: #1e40af; display: flex; align-items: center; gap: 8px; margin: 0;">
             <span style="background: linear-gradient(135deg, #4285f4, #ea4335, #fbbc04, #34a853); color: white; padding: 4px 10px; border-radius: 8px; font-size: 1rem;">G</span>
             Google 뉴스 한국 <span style="font-size: 0.875rem; font-weight: 500; color: #60a5fa;">(${searchLabel} · ${new Date().toLocaleDateString('ko-KR')})</span>
           </h2>
           <div style="display: flex; gap: 8px; flex-wrap: wrap;">
-            <button id="select-all-news-btn" style="padding: 8px 12px; background: #f3f4f6; border: 1px solid #d1d5db; border-radius: 8px; font-size: 0.75rem; font-weight: 600; cursor: pointer;">☑️ 전체 선택</button>
-            <button id="deselect-all-news-btn" style="padding: 8px 12px; background: #f3f4f6; border: 1px solid #d1d5db; border-radius: 8px; font-size: 0.75rem; font-weight: 600; cursor: pointer;">⬜ 선택 해제</button>
-            <button id="translate-news-btn" style="padding: 8px 16px; background: linear-gradient(135deg, #10b981, #059669); color: white; border: none; border-radius: 8px; font-size: 0.875rem; font-weight: 700; cursor: pointer;">🌐 번역하기</button>
+            <button id="select-all-google-btn" style="padding: 8px 12px; background: #f3f4f6; border: 1px solid #d1d5db; border-radius: 8px; font-size: 0.75rem; font-weight: 600; cursor: pointer;">☑️ 전체 선택</button>
+            <button id="deselect-all-google-btn" style="padding: 8px 12px; background: #f3f4f6; border: 1px solid #d1d5db; border-radius: 8px; font-size: 0.75rem; font-weight: 600; cursor: pointer;">⬜ 선택 해제</button>
+            <button id="translate-google-btn" style="padding: 8px 16px; background: linear-gradient(135deg, #10b981, #059669); color: white; border: none; border-radius: 8px; font-size: 0.875rem; font-weight: 700; cursor: pointer;">🌐 번역하기</button>
           </div>
         </div>
-        <div id="news-items-container"></div>
+        <div id="google-items-container"></div>
       </div>
     `;
-    newsCanvas.innerHTML = containerHTML;
+    googleCanvas.innerHTML = containerHTML;
+    containerEl = document.getElementById('google-items-container');
+
+    // Attach listeners immediately (using delegation for container, and direct for buttons)
+    const selectAllBtn = document.getElementById('select-all-google-btn');
+    const deselectAllBtn = document.getElementById('deselect-all-google-btn');
+
+    selectAllBtn?.addEventListener('click', () => {
+      const checkboxes = document.querySelectorAll('#google-items-container .news-checkbox') as NodeListOf<HTMLInputElement>;
+      checkboxes.forEach(cb => {
+        cb.checked = true;
+        const parent = cb.closest('.news-item') as HTMLElement;
+        if (parent) parent.style.borderColor = '#4285f4';
+      });
+    });
+
+    deselectAllBtn?.addEventListener('click', () => {
+      const checkboxes = document.querySelectorAll('#google-items-container .news-checkbox') as NodeListOf<HTMLInputElement>;
+      checkboxes.forEach(cb => {
+        cb.checked = false;
+        const parent = cb.closest('.news-item') as HTMLElement;
+        if (parent) parent.style.borderColor = '#bfdbfe';
+      });
+    });
+
+    // Delegated listener for checkbox changes
+    containerEl?.addEventListener('change', (e) => {
+      const target = e.target as HTMLInputElement;
+      if (target && target.classList.contains('news-checkbox')) {
+        const parent = target.closest('.news-item') as HTMLElement;
+        if (parent) parent.style.borderColor = target.checked ? '#4285f4' : '#bfdbfe';
+      }
+    });
+
+    // Attach translate button handler
+    attachTranslateHandler('translate-google-btn', allItems, 'google');
   }
 
-  const containerEl = document.getElementById('news-items-container');
   let globalItemIndex = 0;
 
-  // Sequential search per category
+  // Sequential search per category with REAL-TIME DOM APPEND
   for (let i = 0; i < categories.length; i++) {
     const category = categories[i];
-    autoStatusText.textContent = `📡 검색 중 ${i + 1}/${categories.length}: ${category.name}...`;
+    if (autoStatusText) {
+      autoStatusText.textContent = `📡 검색 중 ${i + 1}/${categories.length}: ${category.name}...`;
+    }
 
     try {
-      const searchTopic = keyword ? `${keyword} ${category.name} 한국` : `${category.query} 오늘의 인기 뉴스`;
+      const searchTopic = keyword ? `${keyword} ${category.query}` : `${category.query}`;
 
       const prompt = `
         You are a Korean news data extraction API.
-        Search for the TOP 5 MOST POPULAR news articles from Google News Korea (news.google.com) about: ${searchTopic}
+        Search for the 5 LATEST / NEWEST news articles from Google News Korea (news.google.com) about: ${searchTopic}
         
-        Category: ${category.name}
-        Source: Google News Korea (news.google.com/topics?hl=ko&gl=KR)
-
-        IMPORTANT:
-        - Find articles from Korean news sources (한국 뉴스).
-        - Prioritize by POPULARITY (조회수, 히트 수, 인기순).
-        - Articles should be RECENT (within last 24-48 hours).
-        - Content summary should be in Korean (한국어).
-        - Include the publish date for each article.
-        - Return exactly 5 items sorted by popularity.
+        Category/Source Name: ${category.name}
+        
+        IMPORTANT CONSTRAINTS:
+        - TIME: Articles MUST be published within the LAST 24-48 HOURS.
+        - SORT: Descending order by DATE / RECENCY (Newest First). DO NOT sort by popularity.
+        - SOURCE: Find articles from reputable Korean news sources (한국 뉴스).
+        - CONTENT: Summary should be in Korean (한국어).
+        - RETURN: Exactly 5 items.
 
         Output: STRICT RAW JSON ONLY. No markdown.
 
@@ -1103,42 +1415,47 @@ async function runGoogleSearch() {
         const jsonStr = text.substring(startIndex, endIndex + 1);
         const data = JSON.parse(jsonStr);
 
+        const currentItems: any[] = [];
         // Store items
         data.items.forEach((item: any) => {
-          allItems.push({
+          const newItem = {
             site: item.source || category.name,
             title: item.title,
             content: item.content,
             link: item.link,
             date: item.date || 'N/A',
             category: category.name
-          });
+          };
+          allItems.push(newItem);
+          currentItems.push(newItem);
         });
 
-        // Real-time display
-        if (containerEl && data.items.length > 0) {
-          const siteHTML = `
-            <div style="margin-bottom: 20px;" class="site-section">
-              <h3 style="font-size: 1rem; font-weight: 800; color: #1e40af; margin-bottom: 12px; padding-bottom: 4px; border-bottom: 2px solid #93c5fd; display: flex; align-items: center; gap: 8px;">
-                <span style="background: #dbeafe; padding: 2px 8px; border-radius: 6px; font-size: 0.75rem; color: #1d4ed8;">${category.name}</span>
-              </h3>
-              ${data.items.map((item: any) => {
+        // Real-time display: Append Child
+        if (containerEl && currentItems.length > 0) {
+          const sectionDiv = document.createElement('div');
+          sectionDiv.className = 'site-section';
+          sectionDiv.style.marginBottom = '20px';
+
+          sectionDiv.innerHTML = `
+             <h3 style="font-size: 1rem; font-weight: 800; color: #1e40af; margin-bottom: 12px; padding-bottom: 4px; border-bottom: 2px solid #93c5fd; display: flex; align-items: center; gap: 8px;">
+               <span style="background: #dbeafe; padding: 2px 8px; border-radius: 6px; font-size: 0.75rem; color: #1d4ed8;">${category.name}</span>
+             </h3>
+             ${currentItems.map((item: any) => {
             const idx = globalItemIndex++;
             return `
-                <div class="news-item" data-item-id="${idx}" style="display: flex; gap: 12px; align-items: flex-start; padding: 12px 16px; margin: 8px 0 12px 0; background-color: #ffffff; border-radius: 8px; border: 2px solid #bfdbfe; box-shadow: 0 1px 3px rgba(0,0,0,0.05); transition: all 0.2s;">
-                  <input type="checkbox" class="news-checkbox" data-item-id="${idx}" style="width: 18px; height: 18px; margin-top: 4px; cursor: pointer; accent-color: #4285f4;">
-                  <div style="flex: 1;">
-                    <p class="news-title" style="font-size: 1rem; font-weight: 700; color: #111827; margin-bottom: 4px;">${item.title}</p>
-                    <p style="font-size: 0.7rem; color: #9ca3af; margin-bottom: 6px;">📅 ${item.date || 'N/A'} · ${item.source || ''}</p>
-                    <p class="news-content" style="font-size: 0.875rem; color: #4b5563; line-height: 1.6; margin-bottom: 8px;">${item.content}</p>
-                    <a href="${item.link}" target="_blank" style="font-size: 0.7rem; color: #4285f4; text-decoration: none; font-weight: 500; word-break: break-all;">🔗 ${item.link}</a>
-                  </div>
-                </div>
-              `;
+                   <div class="news-item" data-item-id="${idx}" style="display: flex; gap: 12px; align-items: flex-start; padding: 12px 16px; margin: 8px 0 12px 0; background-color: #ffffff; border-radius: 8px; border: 2px solid #bfdbfe; box-shadow: 0 1px 3px rgba(0,0,0,0.05); transition: all 0.2s;">
+                     <input type="checkbox" class="news-checkbox" data-item-id="${idx}" style="width: 18px; height: 18px; margin-top: 4px; cursor: pointer; accent-color: #4285f4;">
+                     <div style="flex: 1;">
+                       <p class="news-title" style="font-size: 1rem; font-weight: 700; color: #111827; margin-bottom: 4px;">${item.title}</p>
+                       <p style="font-size: 0.7rem; color: #9ca3af; margin-bottom: 6px;">📅 ${item.date || 'N/A'} · ${item.source || ''}</p>
+                       <p class="news-content" style="font-size: 0.875rem; color: #4b5563; line-height: 1.6; margin-bottom: 8px;">${item.content}</p>
+                       <a href="${item.link}" target="_blank" style="font-size: 0.7rem; color: #4285f4; text-decoration: none; font-weight: 500; word-break: break-all;">🔗 ${item.link}</a>
+                     </div>
+                   </div>
+                `;
           }).join('')}
-            </div>
           `;
-          containerEl.innerHTML += siteHTML;
+          containerEl.appendChild(sectionDiv);
         }
 
         addLog(`google-${i}`, category.name, `Found ${data.items.length} items`, 'success');
@@ -1149,62 +1466,66 @@ async function runGoogleSearch() {
   }
 
   // Store globally for blog generation
-  (window as any).scrapedNewsItems = allItems;
+  (window as any).googleItems = allItems;
+  (window as any).scrapedNewsItems = allItems; // Update shared for blog generation context
 
-  autoStatusText.textContent = `✅ Google 검색 완료: ${allItems.length}개 발견!`;
+  if (autoStatusText) {
+    autoStatusText.textContent = `✅ Google 검색 완료: ${allItems.length}개 발견!`;
+  }
   addLog('google-done', 'Google Search', `Total: ${allItems.length} items!`, 'success');
 
-  // Attach event listeners
-  setTimeout(() => {
-    const selectAllBtn = document.getElementById('select-all-news-btn');
-    const deselectAllBtn = document.getElementById('deselect-all-news-btn');
-    const checkboxes = document.querySelectorAll('.news-checkbox') as NodeListOf<HTMLInputElement>;
+  // Save state
+  saveAppState();
+}
+// Header "전체 검색" Button Logic
+const globalSearchBtn = document.getElementById('global-search-btn') as HTMLButtonElement;
+if (globalSearchBtn) {
+  globalSearchBtn.onclick = async () => {
+    setButtonLoading(globalSearchBtn, true, "전체 검색 중...");
+    setGlobalStatus(true, "🚀 전체 검색 시작: 뉴스, Google, 네이버 검색을 순차적으로 실행합니다...");
 
-    selectAllBtn?.addEventListener('click', () => {
-      checkboxes.forEach(cb => {
-        cb.checked = true;
-        const parent = cb.closest('.news-item') as HTMLElement;
-        if (parent) parent.style.borderColor = '#4285f4';
-      });
-    });
+    try {
+      // 1. Run Scraper (News Tab) - Silent
+      addLog('global-start', 'Global Search', 'Starting Step 1: Auto-Scraper', 'info');
+      await runScraper(false);
 
-    deselectAllBtn?.addEventListener('click', () => {
-      checkboxes.forEach(cb => {
-        cb.checked = false;
-        const parent = cb.closest('.news-item') as HTMLElement;
-        if (parent) parent.style.borderColor = '#bfdbfe';
-      });
-    });
+      // 2. Run Google Search - Silent
+      addLog('global-step2', 'Global Search', 'Starting Step 2: Google Search', 'info');
+      await runGoogleSearch(false);
 
-    checkboxes.forEach(cb => {
-      cb.addEventListener('change', () => {
-        const parent = cb.closest('.news-item') as HTMLElement;
-        if (parent) parent.style.borderColor = cb.checked ? '#4285f4' : '#bfdbfe';
-      });
-    });
+      // 3. Run Naver Search - Silent
+      addLog('global-step3', 'Global Search', 'Starting Step 3: Naver Search', 'info');
+      await runNaverSearch(false);
 
-    // Attach translate button handler
-    attachTranslateHandler();
-  }, 100);
+      addLog('global-done', 'Global Search', '✅ 모든 검색이 완료되었습니다! 각 탭을 눌러 결과를 확인하세요.', 'success');
+      setGlobalStatus(false);
+
+      // Optional: Switch to the first tab (News) or leave it to user? 
+      // User said "탭을 선택하여 확인 할 수 있도록 해 줘", implying manual selection.
+      // But maybe showing one is nice. Let's show News tab as it's the first one.
+      switchToTab('news');
+
+    } catch (e: any) {
+      addLog('global-err', 'Error', `Global Search Failed: ${e.message}`, 'error');
+    } finally {
+      setButtonLoading(globalSearchBtn, false);
+      setGlobalStatus(false);
+    }
+  };
 }
 
 // Header "네이버 검색" Button Logic
 const naverSearchBtn = document.getElementById('naver-search-btn') as HTMLButtonElement;
 if (naverSearchBtn) {
   naverSearchBtn.onclick = async () => {
-    const originalText = naverSearchBtn.innerHTML;
-    naverSearchBtn.innerHTML = `<svg class="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg> 네이버 검색중...`;
-    naverSearchBtn.disabled = true;
-
+    setButtonLoading(naverSearchBtn, true, "네이버 검색중...");
     await runNaverSearch();
-
-    naverSearchBtn.innerHTML = originalText;
-    naverSearchBtn.disabled = false;
+    setButtonLoading(naverSearchBtn, false);
   };
 }
 
 // Naver Search Function - searches Korean news sources
-async function runNaverSearch() {
+async function runNaverSearch(autoSwitchTab: boolean = true) {
   // Get keyword from settings (optional now)
   const keywordInput = document.getElementById('auto-keyword-input') as HTMLInputElement;
   const autoStatusText = document.getElementById('auto-status-text') as HTMLElement;
@@ -1220,42 +1541,80 @@ async function runNaverSearch() {
 
   // Status message based on whether keyword is provided
   const searchLabel = keyword ? `"${keyword}"` : '인기 뉴스';
-  autoStatusText.textContent = `🔍 네이버 검색: ${searchLabel}...`;
+  if (autoStatusText) {
+    autoStatusText.textContent = `🔍 네이버 검색: ${searchLabel}...`;
+  }
   addLog('naver', 'Naver Search', `Searching ${naverSources.length} Korean sources for ${searchLabel}...`, 'success');
 
   const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
   const allItems: { site: string; title: string; content: string; link: string; date: string; category: string }[] = [];
 
-  // Switch to news tab and create container
-  switchToTab('news');
+  // Switch to naver tab and create container
+  if (autoSwitchTab) switchToTab('naver');
 
-  if (newsCanvas) {
+  let containerEl: HTMLElement | null = null;
+  if (naverCanvas) {
     const containerHTML = `
-      <div id="news-results-container" style="border: 2px solid #22c55e; border-radius: 16px; padding: 24px; margin-bottom: 24px; background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);">
+      <div id="naver-results-container" style="border: 2px solid #22c55e; border-radius: 16px; padding: 24px; margin-bottom: 24px; background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; flex-wrap: wrap; gap: 12px;">
           <h2 style="font-size: 1.5rem; font-weight: 900; color: #166534; display: flex; align-items: center; gap: 8px; margin: 0;">
             <span style="background: #22c55e; color: white; padding: 4px 10px; border-radius: 8px; font-size: 1rem;">N</span>
             네이버 검색 결과 <span style="font-size: 0.875rem; font-weight: 500; color: #4ade80;">(${searchLabel} · ${new Date().toLocaleDateString('ko-KR')})</span>
           </h2>
           <div style="display: flex; gap: 8px; flex-wrap: wrap;">
-            <button id="select-all-news-btn" style="padding: 8px 12px; background: #f3f4f6; border: 1px solid #d1d5db; border-radius: 8px; font-size: 0.75rem; font-weight: 600; cursor: pointer;">☑️ 전체 선택</button>
-            <button id="deselect-all-news-btn" style="padding: 8px 12px; background: #f3f4f6; border: 1px solid #d1d5db; border-radius: 8px; font-size: 0.75rem; font-weight: 600; cursor: pointer;">⬜ 선택 해제</button>
-            <button id="translate-news-btn" style="padding: 8px 16px; background: linear-gradient(135deg, #10b981, #059669); color: white; border: none; border-radius: 8px; font-size: 0.875rem; font-weight: 700; cursor: pointer;">🌐 번역하기</button>
+            <button id="select-all-naver-btn" style="padding: 8px 12px; background: #f3f4f6; border: 1px solid #d1d5db; border-radius: 8px; font-size: 0.75rem; font-weight: 600; cursor: pointer;">☑️ 전체 선택</button>
+            <button id="deselect-all-naver-btn" style="padding: 8px 12px; background: #f3f4f6; border: 1px solid #d1d5db; border-radius: 8px; font-size: 0.75rem; font-weight: 600; cursor: pointer;">⬜ 선택 해제</button>
+            <button id="translate-naver-btn" style="padding: 8px 16px; background: linear-gradient(135deg, #10b981, #059669); color: white; border: none; border-radius: 8px; font-size: 0.875rem; font-weight: 700; cursor: pointer;">🌐 번역하기</button>
           </div>
         </div>
-        <div id="news-items-container"></div>
+        <div id="naver-items-container"></div>
       </div>
     `;
-    newsCanvas.innerHTML = containerHTML;
+    naverCanvas.innerHTML = containerHTML;
+    containerEl = document.getElementById('naver-items-container');
+
+    // Attach listeners immediately
+    const selectAllBtn = document.getElementById('select-all-naver-btn');
+    const deselectAllBtn = document.getElementById('deselect-all-naver-btn');
+
+    selectAllBtn?.addEventListener('click', () => {
+      const checkboxes = document.querySelectorAll('#naver-items-container .news-checkbox') as NodeListOf<HTMLInputElement>;
+      checkboxes.forEach(cb => {
+        cb.checked = true;
+        const parent = cb.closest('.news-item') as HTMLElement;
+        if (parent) parent.style.borderColor = '#22c55e';
+      });
+    });
+
+    deselectAllBtn?.addEventListener('click', () => {
+      const checkboxes = document.querySelectorAll('#naver-items-container .news-checkbox') as NodeListOf<HTMLInputElement>;
+      checkboxes.forEach(cb => {
+        cb.checked = false;
+        const parent = cb.closest('.news-item') as HTMLElement;
+        if (parent) parent.style.borderColor = '#bbf7d0';
+      });
+    });
+
+    // Delegated listener
+    containerEl?.addEventListener('change', (e) => {
+      const target = e.target as HTMLInputElement;
+      if (target && target.classList.contains('news-checkbox')) {
+        const parent = target.closest('.news-item') as HTMLElement;
+        if (parent) parent.style.borderColor = target.checked ? '#22c55e' : '#bbf7d0';
+      }
+    });
+
+    attachTranslateHandler('translate-naver-btn', allItems, 'naver');
   }
 
-  const containerEl = document.getElementById('news-items-container');
   let globalItemIndex = 0;
 
-  // Sequential search per source
+  // Sequential search per source with REAL-TIME DOM APPEND
   for (let i = 0; i < naverSources.length; i++) {
     const source = naverSources[i];
-    autoStatusText.textContent = `📡 검색 중 ${i + 1}/${naverSources.length}: ${source.name}...`;
+    if (autoStatusText) {
+      autoStatusText.textContent = `📡 검색 중 ${i + 1}/${naverSources.length}: ${source.name}...`;
+    }
 
     try {
       // Build search context: use keyword if provided, otherwise use category
@@ -1263,19 +1622,18 @@ async function runNaverSearch() {
 
       const prompt = `
         You are a Korean news data extraction API.
-        Search for the TOP 5 MOST POPULAR/TRENDING news articles from this Korean source:
+        Search for the 5 LATEST / NEWEST news articles from this Korean source:
         
         Source: ${source.name} (${source.url})
         Category: ${source.category}
-        ${keyword ? `Search Topic: "${keyword}"` : `Search for: 오늘의 인기 뉴스 (Today's trending news) in ${source.category} category`}
+        ${keyword ? `Search Topic: "${keyword}"` : `Search for: Recent news in ${source.category} category`}
 
-        IMPORTANT:
-        - Find the MOST VIEWED, MOST COMMENTED, or MOST SHARED articles.
-        - Sort by POPULARITY (히트 수, 조회수, 인기순).
-        - Articles should be RECENT (within last 7 days if possible).
-        - Include the publish date for each article.
-        - Content summary should be in Korean.
-        - Return exactly 5 items.
+        IMPORTANT CONSTRAINTS:
+        - TIME: Articles MUST be published within the LAST 24-48 HOURS.
+        - SORT: Descending order by DATE / RECENCY (Newest First). DO NOT sort by popularity.
+        - SOURCE: Find articles from this specific source.
+        - CONTENT: Summary should be in Korean.
+        - RETURN: Exactly 5 items.
 
         Output: STRICT RAW JSON ONLY. No markdown.
 
@@ -1301,43 +1659,48 @@ async function runNaverSearch() {
         const jsonStr = text.substring(startIndex, endIndex + 1);
         const data = JSON.parse(jsonStr);
 
+        const currentItems: any[] = [];
         // Store items
         data.items.forEach((item: any) => {
-          allItems.push({
+          const newItem = {
             site: source.name,
             title: item.title,
             content: item.content,
             link: item.link,
             date: item.date || 'N/A',
             category: source.category
-          });
+          };
+          allItems.push(newItem);
+          currentItems.push(newItem);
         });
 
-        // Real-time display
-        if (containerEl && data.items.length > 0) {
-          const siteHTML = `
-            <div style="margin-bottom: 20px;" class="site-section">
-              <h3 style="font-size: 1rem; font-weight: 800; color: #166534; margin-bottom: 12px; padding-bottom: 4px; border-bottom: 2px solid #86efac; display: flex; align-items: center; gap: 8px;">
-                <span style="background: #dcfce7; padding: 2px 8px; border-radius: 6px; font-size: 0.75rem; color: #15803d;">${source.category}</span>
-                ${source.name}
-              </h3>
-              ${data.items.map((item: any) => {
+        // Real-time display: Append Child
+        if (containerEl && currentItems.length > 0) {
+          const sectionDiv = document.createElement('div');
+          sectionDiv.className = 'site-section';
+          sectionDiv.style.marginBottom = '20px';
+
+          sectionDiv.innerHTML = `
+             <h3 style="font-size: 1rem; font-weight: 800; color: #166534; margin-bottom: 12px; padding-bottom: 4px; border-bottom: 2px solid #86efac; display: flex; align-items: center; gap: 8px;">
+               <span style="background: #dcfce7; padding: 2px 8px; border-radius: 6px; font-size: 0.75rem; color: #15803d;">${source.category}</span>
+               ${source.name}
+             </h3>
+             ${currentItems.map((item: any) => {
             const idx = globalItemIndex++;
             return `
-                <div class="news-item" data-item-id="${idx}" style="display: flex; gap: 12px; align-items: flex-start; padding: 12px 16px; margin: 8px 0 12px 0; background-color: #ffffff; border-radius: 8px; border: 2px solid #bbf7d0; box-shadow: 0 1px 3px rgba(0,0,0,0.05); transition: all 0.2s;">
-                  <input type="checkbox" class="news-checkbox" data-item-id="${idx}" style="width: 18px; height: 18px; margin-top: 4px; cursor: pointer; accent-color: #22c55e;">
-                  <div style="flex: 1;">
-                    <p class="news-title" style="font-size: 1rem; font-weight: 700; color: #111827; margin-bottom: 4px;">${item.title}</p>
-                    <p style="font-size: 0.7rem; color: #9ca3af; margin-bottom: 6px;">📅 ${item.date || 'N/A'}</p>
-                    <p class="news-content" style="font-size: 0.875rem; color: #4b5563; line-height: 1.6; margin-bottom: 8px;">${item.content}</p>
-                    <a href="${item.link}" target="_blank" style="font-size: 0.7rem; color: #16a34a; text-decoration: none; font-weight: 500; word-break: break-all;">🔗 ${item.link}</a>
-                  </div>
-                </div>
-              `;
+                   <div class="news-item" data-item-id="${idx}" style="display: flex; gap: 12px; align-items: flex-start; padding: 12px 16px; margin: 8px 0 12px 0; background-color: #ffffff; border-radius: 8px; border: 2px solid #bbf7d0; box-shadow: 0 1px 3px rgba(0,0,0,0.05); transition: all 0.2s;">
+                     <input type="checkbox" class="news-checkbox" data-item-id="${idx}" style="width: 18px; height: 18px; margin-top: 4px; cursor: pointer; accent-color: #22c55e;">
+                     <div style="flex: 1;">
+                       <p class="news-title" style="font-size: 1rem; font-weight: 700; color: #111827; margin-bottom: 4px;">${item.title}</p>
+                       <p style="font-size: 0.7rem; color: #9ca3af; margin-bottom: 6px;">📅 ${item.date || 'N/A'}</p>
+                       <p class="news-content" style="font-size: 0.875rem; color: #4b5563; line-height: 1.6; margin-bottom: 8px;">${item.content}</p>
+                       <a href="${item.link}" target="_blank" style="font-size: 0.7rem; color: #16a34a; text-decoration: none; font-weight: 500; word-break: break-all;">🔗 ${item.link}</a>
+                     </div>
+                   </div>
+                `;
           }).join('')}
-            </div>
           `;
-          containerEl.innerHTML += siteHTML;
+          containerEl.appendChild(sectionDiv);
         }
 
         addLog(`naver-${i}`, source.name, `Found ${data.items.length} items`, 'success');
@@ -1348,61 +1711,18 @@ async function runNaverSearch() {
   }
 
   // Store globally for blog generation
+  (window as any).naverItems = allItems;
   (window as any).scrapedNewsItems = allItems;
 
-  autoStatusText.textContent = `✅ 네이버 검색 완료: ${allItems.length}개 발견!`;
+  if (autoStatusText) {
+    autoStatusText.textContent = `✅ 네이버 검색 완료: ${allItems.length}개 발견!`;
+  }
   addLog('naver-done', 'Naver Search', `Total: ${allItems.length} items from Korean sources!`, 'success');
 
-  // Attach event listeners
-  setTimeout(() => {
-    const selectAllBtn = document.getElementById('select-all-news-btn');
-    const deselectAllBtn = document.getElementById('deselect-all-news-btn');
-    const checkboxes = document.querySelectorAll('.news-checkbox') as NodeListOf<HTMLInputElement>;
-
-    selectAllBtn?.addEventListener('click', () => {
-      checkboxes.forEach(cb => {
-        cb.checked = true;
-        const parent = cb.closest('.news-item') as HTMLElement;
-        if (parent) parent.style.borderColor = '#22c55e';
-      });
-    });
-
-    deselectAllBtn?.addEventListener('click', () => {
-      checkboxes.forEach(cb => {
-        cb.checked = false;
-        const parent = cb.closest('.news-item') as HTMLElement;
-        if (parent) parent.style.borderColor = '#bbf7d0';
-      });
-    });
-
-    checkboxes.forEach(cb => {
-      cb.addEventListener('change', () => {
-        const parent = cb.closest('.news-item') as HTMLElement;
-        if (parent) parent.style.borderColor = cb.checked ? '#22c55e' : '#bbf7d0';
-      });
-    });
-
-    // Attach translate button handler
-    attachTranslateHandler();
-  }, 100);
+  // Save state
+  saveAppState();
 }
 
-// Manual Trigger Logic
-if (manualTriggerBtn) {
-  manualTriggerBtn.onclick = async () => {
-    // Visual feedback
-    const originalText = manualTriggerBtn.innerText;
-    manualTriggerBtn.innerText = "⏳ Running...";
-    manualTriggerBtn.disabled = true;
-
-    await runScraper();
-
-    manualTriggerBtn.innerText = originalText;
-    manualTriggerBtn.disabled = false;
-  };
-}
-
-// Results Modal Logic
 if (closeResultsBtn && resultsModal) {
   closeResultsBtn.onclick = () => resultsModal.classList.add('hidden');
 }
@@ -1421,13 +1741,13 @@ if (insertResultsBtn && resultsModal) {
     const editorEl = document.getElementById('editor') as HTMLElement;
     if (editorEl) {
       const formattedHTML = items.map(item => `
-                <h2 style="font-size: 1.875rem; font-weight: 800; color: #111827; margin-bottom: 1.5rem; letter-spacing: -0.025em; border-bottom: 2px solid #e5e7eb; padding-bottom: 0.5rem;">${item.title}</h2>
-                <blockquote style="font-family: 'Nanum Myeongjo', serif; border-left: 4px solid #4f46e5; padding-left: 1rem; margin-left: 0; color: #4b5563; font-style: italic; background-color: #f9fafb; padding: 1rem; border-radius: 0 0.5rem 0.5rem 0;">
-                    <p style="font-size: 1.125rem; line-height: 1.8; margin-bottom: 0.5rem;">${item.content}</p>
-                    <a href="${item.link}" target="_blank" style="font-size: 0.875rem; color: #4f46e5; text-decoration: none; font-weight: 600;">🔗 Read Source</a>
-                </blockquote>
-                <br/>
-            `).join('');
+              <h2 style="font-size: 1.875rem; font-weight: 800; color: #111827; margin-bottom: 1.5rem; letter-spacing: -0.025em; border-bottom: 2px solid #e5e7eb; padding-bottom: 0.5rem;">${item.title}</h2>
+              <blockquote style="font-family: 'Nanum Myeongjo', serif; border-left: 4px solid #4f46e5; padding-left: 1rem; margin-left: 0; color: #4b5563; font-style: italic; background-color: #f9fafb; padding: 1rem; border-radius: 0 0.5rem 0.5rem 0;">
+                  <p style="font-size: 1.125rem; line-height: 1.8; margin-bottom: 0.5rem;">${item.content}</p>
+                  <a href="${item.link}" target="_blank" style="font-size: 0.875rem; color: #4f46e5; text-decoration: none; font-weight: 600;">🔗 Read Source</a>
+              </blockquote>
+              <br/>
+          `).join('');
 
       editorEl.innerHTML += formattedHTML;
       addLog('sys', 'System', 'Inserted news items into editor', 'success');
@@ -1465,14 +1785,14 @@ function renderSiteList() {
     const li = document.createElement('li');
     li.className = "flex items-center justify-between bg-white border border-gray-100 p-2 rounded-lg text-xs shadow-sm";
     li.innerHTML = `
-      <div class="flex flex-col overflow-hidden mr-2">
-        <span class="font-bold text-gray-800 truncate">${name}</span>
-        <span class="text-[10px] text-gray-400 truncate font-mono">${url}</span>
-      </div>
-      <button class="delete-site-btn text-gray-400 hover:text-red-500 transition-colors p-1" data-idx="${idx}">
-        🚫
-      </button>
-    `;
+    <div class="flex flex-col overflow-hidden mr-2">
+      <span class="font-bold text-gray-800 truncate">${name}</span>
+      <span class="text-[10px] text-gray-400 truncate font-mono">${url}</span>
+    </div>
+    <button class="delete-site-btn text-gray-400 hover:text-red-500 transition-colors p-1" data-idx="${idx}">
+      🚫
+    </button>
+  `;
     siteListContainer.appendChild(li);
 
     // Attach delete handler
@@ -1516,30 +1836,10 @@ if (resetSitesBtn && autoSitesInput) {
 
 // Persistence & Initialization
 function initAutomationSettings() {
-  // Populate Time Selects
-  if (autoTimeHour && autoTimeMinute) {
-    autoTimeHour.innerHTML = Array.from({ length: 24 }, (_, i) => `<option value="${String(i).padStart(2, '0')}">${String(i).padStart(2, '0')}</option>`).join('');
-    autoTimeMinute.innerHTML = Array.from({ length: 60 }, (_, i) => `<option value="${String(i).padStart(2, '0')}">${String(i).padStart(2, '0')}</option>`).join('');
-
-    const savedTime = localStorage.getItem(STORAGE_KEYS.AUTO_TIME) || "09:00";
-    const [h, m] = savedTime.split(':');
-    autoTimeHour.value = h || "09";
-    autoTimeMinute.value = m || "00";
-
-    const saveTime = () => {
-      const timeStr = `${autoTimeHour.value}:${autoTimeMinute.value}`;
-      localStorage.setItem(STORAGE_KEYS.AUTO_TIME, timeStr);
-    };
-    autoTimeHour.onchange = saveTime;
-    autoTimeMinute.onchange = saveTime;
-  }
-
   if (autoSitesInput) {
     autoSitesInput.value = localStorage.getItem(STORAGE_KEYS.AUTO_SITES) || DEFAULT_RSS_SITES;
   }
   autoKeywordInput.value = localStorage.getItem(STORAGE_KEYS.AUTO_KEYWORDS) || "";
-  autoWebhookInput.value = localStorage.getItem(STORAGE_KEYS.AUTO_WEBHOOK) || "";
-  autoSheetNameSaveInput.value = localStorage.getItem(STORAGE_KEYS.AUTO_SHEET_NAME_SAVE) || "";
 
   // Save on change
   if (autoSitesInput) {
@@ -1547,64 +1847,14 @@ function initAutomationSettings() {
     renderSiteList();
   }
   autoKeywordInput.onchange = () => localStorage.setItem(STORAGE_KEYS.AUTO_KEYWORDS, autoKeywordInput.value);
-  autoWebhookInput.onchange = () => localStorage.setItem(STORAGE_KEYS.AUTO_WEBHOOK, autoWebhookInput.value);
-  autoSheetNameSaveInput.onchange = () => localStorage.setItem(STORAGE_KEYS.AUTO_SHEET_NAME_SAVE, autoSheetNameSaveInput.value);
 }
 
 // Call init immediately
 initAutomationSettings();
 
-let isAutoEnabled = false;
-let lastAutoRunDate = "";
-
-toggleAutomationBtn.onclick = () => {
-  isAutoEnabled = !isAutoEnabled;
-  if (isAutoEnabled) {
-    toggleAutomationBtn.classList.remove('bg-indigo-600', 'hover:bg-indigo-700', 'shadow-indigo-100');
-    toggleAutomationBtn.classList.add('bg-green-500', 'hover:bg-green-600', 'shadow-green-100', 'animate-pulse');
-    toggleAutomationBtn.innerHTML = `<span>⏳ Automation Active</span>`;
-    autoStatusText.textContent = "Waiting for scheduled time...";
-    addLog('sys', 'System', 'Automation Enabled', 'success');
-  } else {
-    toggleAutomationBtn.classList.add('bg-indigo-600', 'hover:bg-indigo-700', 'shadow-indigo-100');
-    toggleAutomationBtn.classList.remove('bg-green-500', 'hover:bg-green-600', 'shadow-green-100', 'animate-pulse');
-    toggleAutomationBtn.innerHTML = `<span>🤖 Enable Auto-Scraping</span>`;
-    autoStatusText.textContent = "";
-    addLog('sys', 'System', 'Automation Disabled', 'info'); // Log type corrected? Actually codebase might expect strict types, I'll use success/error or info if available.
-    // wait, I saw 'info' usage in previous code but I might have changed it. 
-    // Best to stick to 'success' or 'error' if strict. 
-    // But the removed code used 'info'. If 'info' exists in addLog types, it's fine.
-    // I will use 'success' for now to be safe as I recall strict types.
-  }
-};
-
-setInterval(checkAndRunAutomation, 10000); // Check every 10s
-
-async function checkAndRunAutomation() {
-  if (!isAutoEnabled) return;
-
-  if (!autoTimeHour || !autoTimeMinute) return;
-  const targetTime = `${autoTimeHour.value}:${autoTimeMinute.value}`;
-  if (!targetTime) return;
-
-  const now = new Date();
-  const currentHours = String(now.getHours()).padStart(2, '0');
-  const currentMinutes = String(now.getMinutes()).padStart(2, '0');
-  const currentTime = `${currentHours}:${currentMinutes}`;
-  const todayStr = now.toDateString();
-
-  // Check if time matches and hasn't run today
-  if (currentTime === targetTime && lastAutoRunDate !== todayStr) {
-    lastAutoRunDate = todayStr;
-    await runScraper();
-  }
-}
-
-async function runScraper() {
+async function runScraper(autoSwitchTab: boolean = true) {
   const sitesRaw = autoSitesInput?.value.trim() || DEFAULT_RSS_SITES;
   const keyword = autoKeywordInput.value || "Trending";
-  const webhookUrl = autoWebhookInput.value;
-  const sheetName = autoSheetNameSaveInput.value || "AutoData";
 
   // Parse sites: each line is "SiteName URL" format
   const siteLines = sitesRaw.split('\n').filter(l => l.trim() !== "");
@@ -1624,7 +1874,9 @@ async function runScraper() {
     return;
   }
 
-  autoStatusText.textContent = `🚀 Starting scan of ${sites.length} sites...`;
+  if (autoStatusText) {
+    autoStatusText.textContent = `🚀 Starting scan of ${sites.length} sites...`;
+  }
   addLog('auto', 'Auto-Scraper', `Scanning ${sites.length} sites for "${keyword}"...`, 'success');
 
   const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
@@ -1635,25 +1887,57 @@ async function runScraper() {
 
   if (newsCanvas) {
     // Switch to news tab
-    switchToTab('news');
+    if (autoSwitchTab) switchToTab('news');
 
     const containerHTML = `
-      <div id="news-results-container" style="border: 2px solid #e5e7eb; border-radius: 16px; padding: 24px; margin-bottom: 24px; background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);">
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; flex-wrap: wrap; gap: 12px;">
-          <h2 style="font-size: 1.5rem; font-weight: 900; color: #1f2937; display: flex; align-items: center; gap: 8px; margin: 0;">
-            📰 뉴스 검색 결과 <span style="font-size: 0.875rem; font-weight: 500; color: #6b7280;">(${keyword} · ${new Date().toLocaleDateString('ko-KR')})</span>
-          </h2>
-          <div style="display: flex; gap: 8px; flex-wrap: wrap;">
-            <button id="select-all-news-btn" style="padding: 8px 12px; background: #f3f4f6; border: 1px solid #d1d5db; border-radius: 8px; font-size: 0.75rem; font-weight: 600; cursor: pointer;">☑️ 전체 선택</button>
-            <button id="deselect-all-news-btn" style="padding: 8px 12px; background: #f3f4f6; border: 1px solid #d1d5db; border-radius: 8px; font-size: 0.75rem; font-weight: 600; cursor: pointer;">⬜ 선택 해제</button>
-            <button id="translate-news-btn" style="padding: 8px 16px; background: linear-gradient(135deg, #10b981, #059669); color: white; border: none; border-radius: 8px; font-size: 0.875rem; font-weight: 700; cursor: pointer; box-shadow: 0 2px 4px rgba(16,185,129,0.3);">🌐 번역하기</button>
-          </div>
+    <div id="news-results-container" style="border: 2px solid #e5e7eb; border-radius: 16px; padding: 24px; margin-bottom: 24px; background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; flex-wrap: wrap; gap: 12px;">
+        <h2 style="font-size: 1.5rem; font-weight: 900; color: #1f2937; display: flex; align-items: center; gap: 8px; margin: 0;">
+          📰 뉴스 검색 결과 <span style="font-size: 0.875rem; font-weight: 500; color: #6b7280;">(${keyword} · ${new Date().toLocaleDateString('ko-KR')})</span>
+        </h2>
+        <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+          <button id="select-all-news-btn" style="padding: 8px 12px; background: #f3f4f6; border: 1px solid #d1d5db; border-radius: 8px; font-size: 0.75rem; font-weight: 600; cursor: pointer;">☑️ 전체 선택</button>
+          <button id="deselect-all-news-btn" style="padding: 8px 12px; background: #f3f4f6; border: 1px solid #d1d5db; border-radius: 8px; font-size: 0.75rem; font-weight: 600; cursor: pointer;">⬜ 선택 해제</button>
         </div>
-        <div id="news-items-container"></div>
       </div>
-    `;
+      <div id="news-items-container"></div>
+    </div>
+  `;
     newsCanvas.innerHTML = containerHTML;
     containerEl = document.getElementById('news-items-container');
+
+    // Attach listeners immediately
+    const selectAllBtn = document.getElementById('select-all-news-btn');
+    const deselectAllBtn = document.getElementById('deselect-all-news-btn');
+
+    selectAllBtn?.addEventListener('click', () => {
+      const checkboxes = document.querySelectorAll('.news-checkbox') as NodeListOf<HTMLInputElement>;
+      checkboxes.forEach(cb => {
+        cb.checked = true;
+        const parent = cb.closest('.news-item') as HTMLElement;
+        if (parent) parent.style.borderColor = '#10b981';
+      });
+    });
+
+    deselectAllBtn?.addEventListener('click', () => {
+      const checkboxes = document.querySelectorAll('.news-checkbox') as NodeListOf<HTMLInputElement>;
+      checkboxes.forEach(cb => {
+        cb.checked = false;
+        const parent = cb.closest('.news-item') as HTMLElement;
+        if (parent) parent.style.borderColor = '#e5e7eb';
+      });
+    });
+
+    // Delegated listener
+    containerEl?.addEventListener('change', (e) => {
+      const target = e.target as HTMLInputElement;
+      if (target && target.classList.contains('news-checkbox')) {
+        const parent = target.closest('.news-item') as HTMLElement;
+        if (parent) parent.style.borderColor = target.checked ? '#10b981' : '#e5e7eb';
+      }
+    });
+
+    // attachTranslateHandler removed as translations are now automatic
   }
 
   let globalItemIndex = 0;
@@ -1661,25 +1945,30 @@ async function runScraper() {
   // Sequential per-site scraping with REAL-TIME updates
   for (let i = 0; i < sites.length; i++) {
     const site = sites[i];
-    autoStatusText.textContent = `📡 Scanning ${i + 1}/${sites.length}: ${site.name}...`;
+    if (autoStatusText) {
+      autoStatusText.textContent = `📡 Scanning ${i + 1}/${sites.length}: ${site.name}...`;
+    }
     addLog(`site-${i}`, 'Scanning', site.name, 'success');
 
     try {
       const prompt = `
         You are a strict data extraction API.
-        Context: Find the top 3 UNIQUE news articles related to "${keyword}" from this SPECIFIC source ONLY:
+        Context: Find the 3 LATEST / NEWEST news articles related to "${keyword}" from this SPECIFIC source ONLY:
         
         Source: ${site.name} (${site.url})
 
-        IMPORTANT: 
-        - Only return articles that are ACTUALLY FROM this specific source/website.
-        - Do NOT return generic or duplicate articles.
-        - Each article must include its publish date.
+        IMPORTANT CONSTRAINTS:
+        - TIME: Articles MUST be published within the LAST 24-48 HOURS.
+        - SORT: Descending order by DATE / RECENCY (Newest First). DO NOT sort by popularity.
+        - SOURCE: Only return articles ACTUALLY FROM this specific source/website.
+        - DUPLICATES: Do NOT return generic or duplicate articles.
+        - DATE: Each article must include its publish date.
 
         Instructions:
         1. Search this specific site for "${keyword}" related content.
         2. Extract exactly 3 UNIQUE items: Title, Publish Date, Content (1-2 sentence summary), Link.
-        3. Output: STRICT RAW JSON ONLY. No markdown, no intro text.
+        3. TRANSLATE Title and Content to KOREAN (한국어) immediately.
+        4. Output: STRICT RAW JSON ONLY. No markdown, no intro text.
 
         JSON Schema:
         {
@@ -1687,13 +1976,21 @@ async function runScraper() {
                 { "title": "...", "date": "YYYY-MM-DD or 날짜 표시", "content": "...", "link": "..." }
             ]
         }
-      `;
+        `;
 
-      const response = await ai.models.generateContent({
+      // Timeout wrapper for API call
+      const generateWithTimeout = async (options: any, ms: number) => {
+        const timeout = new Promise((_, reject) => setTimeout(() => reject(new Error("Timeout")), ms));
+        const apiCall = ai.models.generateContent(options);
+        return Promise.race([apiCall, timeout]);
+      };
+
+      // 15 seconds timeout per site
+      const response: any = await generateWithTimeout({
         model: "gemini-2.0-flash-exp",
         contents: { parts: [{ text: prompt }] },
         config: { tools: [{ googleSearch: {} }] }
-      });
+      }, 15000);
 
       const text = response.text || "";
       const startIndex = text.indexOf('{');
@@ -1703,25 +2000,28 @@ async function runScraper() {
         const jsonStr = text.substring(startIndex, endIndex + 1);
         const data = JSON.parse(jsonStr);
 
+        const currentItems: any[] = [];
         // Store items
         data.items.forEach((item: any) => {
-          allItems.push({
+          const newItem = {
             site: site.name,
             title: item.title,
             content: item.content,
             link: item.link,
             date: item.date || 'N/A'
-          });
+          };
+          allItems.push(newItem);
+          currentItems.push(newItem);
         });
 
-        // REAL-TIME Canvas Update for this site
-        if (containerEl && data.items.length > 0) {
+        // Real-time display: Append Child
+        if (containerEl && currentItems.length > 0) {
           const siteHTML = `
             <div style="margin-bottom: 20px;" class="site-section">
-              <h3 style="font-size: 1rem; font-weight: 800; color: #4f46e5; margin-bottom: 12px; padding-bottom: 4px; border-bottom: 2px solid #c7d2fe;">
-                📌 ${site.name}
+              <h3 style="font-size: 1rem; font-weight: 800; color: #1e40af; margin-bottom: 12px; padding-bottom: 4px; border-bottom: 2px solid #93c5fd; display: flex; align-items: center; gap: 8px;">
+                <span style="background: #dbeafe; padding: 2px 8px; border-radius: 6px; font-size: 0.75rem; color: #1d4ed8;">${site.name}</span>
               </h3>
-              ${data.items.map((item: any) => {
+              ${currentItems.map((item: any) => {
             const idx = globalItemIndex++;
             return `
                 <div class="news-item" data-item-id="${idx}" style="display: flex; gap: 12px; align-items: flex-start; padding: 12px 16px; margin: 8px 0 12px 0; background-color: #ffffff; border-radius: 8px; border: 2px solid #e5e7eb; box-shadow: 0 1px 3px rgba(0,0,0,0.05); transition: all 0.2s;">
@@ -1730,14 +2030,19 @@ async function runScraper() {
                     <p class="news-title" style="font-size: 1rem; font-weight: 700; color: #111827; margin-bottom: 4px;">${item.title}</p>
                     <p style="font-size: 0.7rem; color: #9ca3af; margin-bottom: 6px;">📅 ${item.date || 'N/A'}</p>
                     <p class="news-content" style="font-size: 0.875rem; color: #4b5563; line-height: 1.6; margin-bottom: 8px;">${item.content}</p>
-                    <a href="${item.link}" target="_blank" style="font-size: 0.7rem; color: #4f46e5; text-decoration: none; font-weight: 500; word-break: break-all;">🔗 ${item.link}</a>
+                    <a href="${item.link}" target="_blank" style="font-size: 0.7rem; color: #10b981; text-decoration: none; font-weight: 500; word-break: break-all;">🔗 ${item.link}</a>
                   </div>
                 </div>
               `;
           }).join('')}
             </div>
           `;
-          containerEl.innerHTML += siteHTML;
+
+          const tempDiv = document.createElement('div');
+          tempDiv.innerHTML = siteHTML;
+          while (tempDiv.firstChild) {
+            containerEl.appendChild(tempDiv.firstChild);
+          }
         }
 
         addLog(`site-${i}-ok`, site.name, `Found ${data.items.length} items`, 'success');
@@ -1748,155 +2053,14 @@ async function runScraper() {
   }
 
   // Store globally for translation
+  (window as any).scraperItems = allItems;
   (window as any).scrapedNewsItems = allItems;
 
-  autoStatusText.textContent = `✅ Found ${allItems.length} total items from ${sites.length} sites`;
+  if (autoStatusText) {
+    autoStatusText.textContent = `✅ Found ${allItems.length} total items from ${sites.length} sites`;
+  }
   addLog('auto', 'Auto-Scraper', `Total: ${allItems.length} items collected!`, 'success');
 
-  // Attach event listeners after all items are loaded
-  setTimeout(() => {
-    const selectAllBtn = document.getElementById('select-all-news-btn');
-    const deselectAllBtn = document.getElementById('deselect-all-news-btn');
-    const translateBtn = document.getElementById('translate-news-btn');
-    const checkboxes = document.querySelectorAll('.news-checkbox') as NodeListOf<HTMLInputElement>;
-
-    // Select All
-    selectAllBtn?.addEventListener('click', () => {
-      checkboxes.forEach(cb => {
-        cb.checked = true;
-        const parent = cb.closest('.news-item') as HTMLElement;
-        if (parent) parent.style.borderColor = '#10b981';
-      });
-    });
-
-    // Deselect All
-    deselectAllBtn?.addEventListener('click', () => {
-      checkboxes.forEach(cb => {
-        cb.checked = false;
-        const parent = cb.closest('.news-item') as HTMLElement;
-        if (parent) parent.style.borderColor = '#e5e7eb';
-      });
-    });
-
-    // Checkbox visual feedback
-    checkboxes.forEach(cb => {
-      cb.addEventListener('change', () => {
-        const parent = cb.closest('.news-item') as HTMLElement;
-        if (parent) parent.style.borderColor = cb.checked ? '#10b981' : '#e5e7eb';
-      });
-    });
-
-    // Translate Button
-    translateBtn?.addEventListener('click', async () => {
-      const items = (window as any).scrapedNewsItems || [];
-      if (items.length === 0) return;
-
-      translateBtn.innerHTML = '⏳ 번역 중...';
-      (translateBtn as HTMLButtonElement).disabled = true;
-
-      try {
-        const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-
-        const prompt = `
-          Translate the following news items to Korean. Keep the same structure.
-          Return STRICT JSON ONLY, no markdown:
-          
-          Items to translate:
-          ${JSON.stringify(items.map((i: any) => ({ title: i.title, content: i.content })))}
-          
-          Output format:
-          { "translations": [{ "title": "한국어 제목", "content": "한국어 내용" }, ...] }
-        `;
-
-        const response = await ai.models.generateContent({
-          model: "gemini-2.0-flash-exp",
-          contents: { parts: [{ text: prompt }] }
-        });
-
-        const text = response.text || "";
-        const startIdx = text.indexOf('{');
-        const endIdx = text.lastIndexOf('}');
-
-        if (startIdx !== -1 && endIdx !== -1) {
-          const jsonStr = text.substring(startIdx, endIdx + 1);
-          const data = JSON.parse(jsonStr);
-
-          // Update DOM with translations
-          data.translations.forEach((trans: any, idx: number) => {
-            const itemEl = document.querySelector(`.news-item[data-item-id="${idx}"]`);
-            if (itemEl) {
-              const titleEl = itemEl.querySelector('.news-title');
-              const contentEl = itemEl.querySelector('.news-content');
-              if (titleEl) titleEl.textContent = trans.title;
-              if (contentEl) contentEl.textContent = trans.content;
-            }
-          });
-
-          // Update global items with translations
-          data.translations.forEach((trans: any, idx: number) => {
-            if (items[idx]) {
-              items[idx].title = trans.title;
-              items[idx].content = trans.content;
-            }
-          });
-
-          addLog('translate', 'Translation', `${data.translations.length} items translated!`, 'success');
-          translateBtn.innerHTML = '✅ 번역 완료';
-        }
-      } catch (e: any) {
-        addLog('translate-err', 'Translation', `Error: ${e.message}`, 'error');
-        translateBtn.innerHTML = '❌ 번역 실패';
-      }
-
-      setTimeout(() => {
-        translateBtn.innerHTML = '🌐 번역하기';
-        (translateBtn as HTMLButtonElement).disabled = false;
-      }, 2000);
-    });
-  }, 100);
-
-  // Save to Google Sheet with Status Feedback
-  if (webhookUrl && allItems.length > 0) {
-    autoStatusText.textContent = "💾 Saving to Google Sheet...";
-
-    try {
-      const targetUrl = new URL(webhookUrl);
-      targetUrl.searchParams.append('sheetName', sheetName);
-
-      const saveResponse = await fetch(targetUrl.toString(), {
-        method: 'POST',
-        mode: 'no-cors',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          sheetName: sheetName,
-          site: "Multiple Sources",
-          items: allItems.map(i => ({ ...i, source: i.site }))
-        })
-      });
-
-      // Note: with no-cors, we can't read the response, but if no error thrown, request was sent
-      addLog('save-ok', '📊 Google Sheet', `✅ ${allItems.length} items saved successfully!`, 'success');
-      autoStatusText.textContent = `✅ 완료! ${allItems.length}개 아이템 저장됨`;
-
-    } catch (e: any) {
-      const errorMsg = e.message || 'Unknown error';
-      addLog('save-err', '📊 Google Sheet', `❌ Save failed: ${errorMsg}`, 'error');
-      autoStatusText.textContent = `❌ 저장 실패`;
-
-      // Show user-friendly error explanation
-      let explanation = '알 수 없는 오류가 발생했습니다.';
-      if (errorMsg.includes('Invalid URL')) {
-        explanation = 'Webhook URL이 잘못되었습니다. https://script.google.com/... 형식인지 확인하세요.';
-      } else if (errorMsg.includes('Failed to fetch') || errorMsg.includes('NetworkError')) {
-        explanation = '네트워크 오류입니다. 인터넷 연결을 확인하거나, GAS 배포 설정을 확인하세요.';
-      } else if (errorMsg.includes('CORS')) {
-        explanation = 'CORS 오류입니다. GAS 배포 시 "Anyone" 액세스로 설정했는지 확인하세요.';
-      }
-
-      alert(`❌ Google Sheet 저장 실패\n\n오류: ${errorMsg}\n\n💡 해결 방법:\n${explanation}`);
-    }
-  } else if (!webhookUrl) {
-    addLog('save-skip', '📊 Google Sheet', `⚠️ Webhook URL 미설정 - 저장 건너뜀`, 'error');
-    autoStatusText.textContent = `⚠️ 캔버스에만 표시됨 (Sheet URL 없음)`;
-  }
+  // Save state
+  saveAppState();
 }

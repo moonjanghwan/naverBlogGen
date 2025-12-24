@@ -42,8 +42,14 @@
     <div class="flex items-center gap-2">
 
 
+      <button id="global-search-btn"
+        class="bg-indigo-600 hover:bg-indigo-700 text-white px-5 py-2.5 rounded-xl text-xs font-bold transition-all shadow-lg shadow-indigo-100 flex items-center gap-2">
+        <span class="text-sm font-black">ALL</span>
+        전체 검색
+      </button>
+
       <button id="search-news-btn"
-        class="bg-emerald-500 hover:bg-emerald-600 text-white px-5 py-2.5 rounded-xl text-xs font-bold transition-all shadow-lg shadow-emerald-100 flex items-center gap-2">
+        class="bg-indigo-600 hover:bg-indigo-700 text-white px-5 py-2.5 rounded-xl text-xs font-bold transition-all shadow-lg shadow-indigo-100 flex items-center gap-2">
         <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
             d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
@@ -52,13 +58,13 @@
       </button>
 
       <button id="google-search-btn"
-        class="bg-gradient-to-r from-blue-500 via-red-500 to-yellow-500 hover:from-blue-600 hover:via-red-600 hover:to-yellow-600 text-white px-5 py-2.5 rounded-xl text-xs font-bold transition-all shadow-lg shadow-blue-100 flex items-center gap-2">
+        class="bg-indigo-600 hover:bg-indigo-700 text-white px-5 py-2.5 rounded-xl text-xs font-bold transition-all shadow-lg shadow-indigo-100 flex items-center gap-2">
         <span class="text-sm font-black">G</span>
         Google 검색
       </button>
 
       <button id="naver-search-btn"
-        class="bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white px-5 py-2.5 rounded-xl text-xs font-bold transition-all shadow-lg shadow-green-100 flex items-center gap-2">
+        class="bg-indigo-600 hover:bg-indigo-700 text-white px-5 py-2.5 rounded-xl text-xs font-bold transition-all shadow-lg shadow-indigo-100 flex items-center gap-2">
         <span class="text-sm font-black">N</span>
         네이버 검색
       </button>
@@ -77,7 +83,7 @@
 
 
       <button id="copy-all-btn"
-        class="group flex items-center justify-center gap-2 px-4 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-xl shadow-lg shadow-blue-200 hover:shadow-blue-300 hover:-translate-y-0.5 transition-all duration-300">
+        class="group flex items-center justify-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl shadow-lg shadow-indigo-200 hover:shadow-indigo-300 hover:-translate-y-0.5 transition-all duration-300">
         <span class="text-sm font-bold">통합 원고 복사</span>
       </button>
 
@@ -131,53 +137,25 @@
       </div>
     </div>
     <!-- Sidebar -->
-    <aside
-      class="w-80 md:w-[400px] border-r border-gray-200 bg-white flex flex-col p-6 space-y-6 overflow-y-auto custom-scrollbar">
+    <aside class="w-80 md:w-[400px] border-r border-gray-200 bg-white flex flex-col overflow-hidden h-screen">
 
-      <!-- AI Model -->
-      <section class="space-y-4">
-        <h3 class="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em]">Engine Config</h3>
-        <div>
-          <label class="text-[11px] font-bold text-gray-500 mb-1 block">Text Model</label>
-          <select id="text-model"
-            class="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-xs outline-none cursor-pointer">
-            <option value="gemini-2.5-flash-preview-09-2025" selected>Gemini 2.5 Flash (초고속 & 씽킹 10k)</option>
-            <option value="gemini-3-pro-preview">Gemini 3 Pro (추론 성능 강화)</option>
-            <option value="gemini-3-flash-preview">Gemini 3 Flash (최신 모델)</option>
-          </select>
-        </div>
-        <div>
-          <label class="text-[11px] font-bold text-gray-500 mb-1 block">Image Model</label>
-          <select id="image-model"
-            class="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-xs outline-none cursor-pointer">
-            <option value="gemini-2.5-flash-image" selected>Gemini 2.5 Flash Image (기본)</option>
-            <option value="gemini-3-pro-image-preview">Gemini 3 Pro Image (고화질)</option>
-          </select>
-        </div>
-      </section>
+      <!-- Top Section: Inputs & Controls (Scrollable if needed, but shrinks) -->
+      <div class="flex-shrink-0 p-6 pb-0 space-y-6 overflow-y-auto custom-scrollbar" style="max-height: 60vh;">
 
-      <!-- Task Sources -->
-      <div class="pt-4 border-t border-gray-100">
-        <div class="space-y-8">
-          <!-- Manual -->
-          <section class="space-y-3">
-            <h3 class="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em]">Manual Entry</h3>
+        <!-- Manual Entry Card -->
+        <div class="bg-indigo-50 p-5 rounded-2xl border border-indigo-100 shadow-sm">
+          <h3 class="text-[10px] font-black text-indigo-300 uppercase tracking-[0.2em] mb-4">Manual Entry</h3>
+          <div class="space-y-3">
             <input type="text" id="manual-title" placeholder="원고 주제 또는 제목 입력"
-              class="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-xs outline-none focus:bg-white focus:border-green-400 transition-all">
+              class="w-full bg-white border border-indigo-100 rounded-xl px-4 py-3 text-xs outline-none focus:border-indigo-500 transition-all">
             <input type="text" id="manual-url" placeholder="참고할 URL (선택 사항)"
-              class="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-xs outline-none focus:bg-white focus:border-green-400 transition-all">
+              class="w-full bg-white border border-indigo-100 rounded-xl px-4 py-3 text-xs outline-none focus:border-indigo-500 transition-all">
             <button id="run-manual"
-              class="w-full bg-[#03C75A] text-white py-3 rounded-xl font-bold text-xs hover:bg-[#02a84c] transition-all shadow-md">
+              class="w-full bg-indigo-600 text-white py-4 rounded-xl font-bold text-xs hover:bg-indigo-700 transition-all shadow-lg flex items-center justify-center gap-2 transform hover:scale-[1.02]">
               단일 원고 생성
             </button>
-          </section>
-
-          <!-- Blog Generator -->
-          <section class="space-y-3 pt-6 border-t border-gray-100">
-            <h3 class="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em]">Blog Generator</h3>
-            <p class="text-[10px] text-gray-500">캔버스에서 뉴스를 선택하고 버튼을 눌러 블로그 글을 생성하세요.</p>
             <button id="run-automation"
-              class="w-full bg-gray-900 text-white py-4 rounded-xl font-bold text-xs hover:bg-black transition-all shadow-xl flex items-center justify-center gap-2">
+              class="w-full bg-indigo-600 text-white py-4 rounded-xl font-bold text-xs hover:bg-indigo-700 transition-all shadow-lg flex items-center justify-center gap-2 transform hover:scale-[1.02]">
               <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24"
                 stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -185,40 +163,49 @@
               </svg>
               선택 뉴스로 블로그 글 생성
             </button>
-          </section>
-
-          <!-- Generated Posts (for copy selection) -->
-          <section class="space-y-3 pt-6 border-t border-gray-100">
-            <div class="flex items-center justify-between">
-              <h3 class="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em]">Generated Posts</h3>
-              <button id="clear-posts-btn" class="text-[9px] text-red-500 hover:text-red-700 font-bold">초기화</button>
-            </div>
-            <div id="generated-posts-list" class="space-y-2 max-h-40 overflow-y-auto">
-              <p class="text-[10px] text-gray-400 italic">생성된 글이 없습니다</p>
-            </div>
-          </section>
-
+          </div>
         </div>
       </div>
 
-      <!-- Logs -->
-      <div id="status-container"
-        class="flex-1 space-y-2 mt-4 custom-scrollbar overflow-y-auto pr-2 border-t border-gray-100 pt-4"></div>
+      <!-- Bottom Section: Dynamic Activity Feed (Fills remaining space) -->
+      <section class="flex-1 flex flex-col min-h-0 mt-6 border-t border-gray-100">
+        <div class="p-6 pt-4 flex flex-col h-full bg-gray-50/30">
+          <div class="flex items-center justify-between mb-3 px-1 flex-shrink-0">
+            <span class="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em]">Activity Feed</span>
+            <button id="clear-posts-btn"
+              class="text-[9px] text-gray-400 hover:text-red-500 transition-colors">Clear</button>
+          </div>
+
+          <!-- Message Container: Fills height & Scrolls internally -->
+          <div id="message-window"
+            class="flex-1 bg-white rounded-xl p-4 overflow-y-auto custom-scrollbar space-y-3 border border-gray-100 shadow-inner w-full">
+            <div class="flex flex-col items-center justify-center h-full text-gray-300 space-y-2">
+              <svg class="w-8 h-8 opacity-20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                  d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z">
+                </path>
+              </svg>
+              <p class="text-xs">작업 대기 중...</p>
+            </div>
+          </div>
+        </div>
+      </section>
     </aside>
 
     <!-- Main Editor -->
-    <main class="flex-1 bg-[#F1F5F9] overflow-y-auto p-8 relative">
-      <div class="max-w-[850px] mx-auto">
+    <main class="flex-1 bg-[#F1F5F9] overflow-y-auto p-4 relative">
+      <div class="w-full h-full">
         <div
-          class="shadow-2xl rounded-[2.5rem] border border-gray-200 min-h-[1200px] p-16 md:p-24 flex flex-col relative overflow-hidden">
+          class="shadow-xl rounded-2xl border border-gray-200 min-h-full p-6 flex flex-col relative overflow-hidden bg-white">
 
           <!-- Visual Background Layer (Not selectable) -->
           <div class="absolute inset-0 bg-white -z-10"></div>
 
           <!-- Settings Modal -->
           <div id="settings-modal"
-            class="hidden absolute inset-0 z-50 bg-white/90 backdrop-blur-md flex items-center justify-center p-8 transition-all duration-300">
-            <div class="bg-white border border-gray-200 rounded-3xl p-8 w-full max-w-lg shadow-2xl relative">
+            class="hidden absolute inset-0 z-50 bg-white/90 backdrop-blur-md flex items-center justify-center p-4 transition-all duration-300">
+            <div
+              class="bg-white border border-gray-200 rounded-3xl p-8 w-full h-full shadow-2xl relative flex flex-col">
               <button id="close-settings-btn" class="absolute top-4 right-4 text-gray-400 hover:text-gray-600">
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24"
                   stroke="currentColor">
@@ -229,28 +216,27 @@
               <h2 class="text-xl font-black text-gray-900 mb-1">Auto Crawler Settings</h2>
               <p class="text-sm text-gray-500 mb-6">Configure scheduled content scraping and saving.</p>
 
-              <div class="space-y-4">
+              <div class="space-y-4 flex-1 overflow-y-auto px-2">
                 <div class="grid grid-cols-2 gap-4">
-                  <div>
-                    <label class="block text-xs font-bold text-gray-500 uppercase mb-2">Schedule Time (24h)</label>
-                    <div class="flex gap-2">
-                      <div class="flex-1 flex items-center bg-gray-50 border border-gray-200 rounded-xl px-2">
-                        <select id="auto-time-hour"
-                          class="flex-1 bg-transparent text-sm font-bold text-gray-900 outline-none p-2 cursor-pointer text-center">
-                          <!-- Options populated by JS -->
-                        </select>
-                        <span class="font-bold text-gray-400">:</span>
-                        <select id="auto-time-minute"
-                          class="flex-1 bg-transparent text-sm font-bold text-gray-900 outline-none p-2 cursor-pointer text-center">
-                          <!-- Options populated by JS -->
-                        </select>
-                      </div>
-                      <button id="manual-trigger-btn"
-                        class="bg-indigo-100 hover:bg-indigo-200 text-indigo-700 px-4 rounded-xl text-xs font-bold transition-all whitespace-nowrap">
-                        🚀 Run Now
-                      </button>
+                  <!-- Engine Config (Moved from Sidebar) -->
+                  <div class="col-span-2">
+                    <label class="block text-xs font-bold text-gray-500 uppercase mb-2">Engine Configuration</label>
+                    <div class="flex gap-3">
+                      <select id="text-model"
+                        class="flex-1 bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-xs outline-none cursor-pointer font-medium hover:border-gray-300 transition-colors">
+                        <option value="gemini-2.5-flash-preview-09-2025" selected>Gemini 2.5 Flash (초고속 & 씽킹 10k)
+                        </option>
+                        <option value="gemini-3-pro-preview">Gemini 3 Pro (추론 성능 강화)</option>
+                        <option value="gemini-3-flash-preview">Gemini 3 Flash (최신 모델)</option>
+                      </select>
+                      <select id="image-model"
+                        class="flex-1 bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-xs outline-none cursor-pointer font-medium hover:border-gray-300 transition-colors">
+                        <option value="gemini-2.5-flash-image" selected>Gemini 2.5 Flash Image (기본)</option>
+                        <option value="gemini-3-pro-image-preview">Gemini 3 Pro Image (고화질)</option>
+                      </select>
                     </div>
                   </div>
+
                   <div class="col-span-2">
                     <label class="block text-xs font-bold text-gray-500 uppercase mb-2">Target Sites & RSS Feeds</label>
                     <textarea id="auto-sites-input" class="hidden"></textarea> <!-- Hidden for compatibility -->
@@ -284,6 +270,42 @@
                     </div>
                   </div>
 
+                  <!-- Google Search Sources Section -->
+                  <div class="col-span-2 pt-4 border-t border-blue-200">
+                    <label class="block text-xs font-bold text-blue-600 uppercase mb-2 flex items-center gap-2">
+                      <span class="bg-blue-500 text-white px-2 py-0.5 rounded text-[10px] font-black">G</span>
+                      Google 검색 소스
+                    </label>
+
+                    <!-- Google Sources List -->
+                    <div
+                      class="bg-white border border-blue-200 rounded-xl overflow-hidden mb-3 flex flex-col h-[150px]">
+                      <ul id="google-site-list-container" class="flex-1 overflow-y-auto p-2 space-y-2 bg-blue-50/30">
+                        <!-- JS will populate list items here -->
+                      </ul>
+                    </div>
+
+                    <!-- Add New Google Source -->
+                    <div class="flex gap-2">
+                      <input type="text" id="new-google-name" placeholder="소스명 (예: 과학, 경제)"
+                        class="w-1/4 bg-blue-50 border border-blue-200 rounded-xl px-3 py-2 text-xs font-bold outline-none focus:ring-2 focus:ring-blue-500">
+                      <input type="text" id="new-google-query" placeholder="검색어 (예: science technology Korea)"
+                        class="flex-1 bg-blue-50 border border-blue-200 rounded-xl px-3 py-2 text-xs font-mono outline-none focus:ring-2 focus:ring-blue-500">
+                      <button id="add-google-site-btn"
+                        class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-xl text-xs font-bold transition-all shadow-md active:scale-95 whitespace-nowrap">
+                        + 추가
+                      </button>
+                    </div>
+
+                    <!-- Google Sources Footer Controls -->
+                    <div class="flex justify-end gap-2 mt-2">
+                      <button id="reset-google-sites-btn"
+                        class="text-[10px] font-bold text-gray-400 hover:text-red-500 transition-colors flex items-center gap-1">
+                        🔄 기본값 복원
+                      </button>
+                    </div>
+                  </div>
+
                   <!-- Naver Search Sources Section -->
                   <div class="col-span-2 pt-4 border-t border-green-200">
                     <label class="block text-xs font-bold text-green-600 uppercase mb-2 flex items-center gap-2">
@@ -308,7 +330,7 @@
                       <input type="text" id="new-naver-url" placeholder="URL"
                         class="flex-1 bg-green-50 border border-green-200 rounded-xl px-3 py-2 text-xs font-mono outline-none focus:ring-2 focus:ring-green-500">
                       <button id="add-naver-site-btn"
-                        class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-xl text-xs font-bold transition-all shadow-md active:scale-95 whitespace-nowrap">
+                        class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-xl text-xs font-bold transition-all shadow-md active:scale-95 whitespace-nowrap">
                         + 추가
                       </button>
                     </div>
@@ -329,28 +351,7 @@
                     class="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-indigo-500">
                 </div>
 
-                <div class="pt-4 border-t border-gray-100"></div>
 
-                <div>
-                  <label class="block text-xs font-bold text-gray-500 uppercase mb-2">Google Sheet Webhook URL
-                    (GAS)</label>
-                  <input type="text" id="auto-webhook-input" placeholder="https://script.google.com/macros/s/..."
-                    class="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-xs font-mono text-gray-600 outline-none focus:ring-2 focus:ring-indigo-500">
-                </div>
-
-                <div>
-                  <label class="block text-xs font-bold text-gray-500 uppercase mb-2">Sheet Name</label>
-                  <input type="text" id="auto-sheet-name-save-input" placeholder="Sheet1"
-                    class="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-indigo-500">
-                </div>
-
-                <div class="pt-4">
-                  <button id="toggle-automation-btn"
-                    class="w-full bg-indigo-600 hover:bg-indigo-700 text-white py-4 rounded-xl font-bold text-sm shadow-xl shadow-indigo-100 transition-all transform active:scale-95 flex items-center justify-center gap-2">
-                    <span>🤖 Enable Auto-Scraping</span>
-                  </button>
-                  <div id="auto-status-text" class="text-xs text-center text-gray-400 font-medium mt-3 h-4"></div>
-                </div>
               </div>
             </div>
           </div>
@@ -363,7 +364,15 @@
           <div class="flex border-b border-gray-200 bg-gray-50/50">
             <button id="tab-news"
               class="canvas-tab active flex-1 py-3 px-4 text-sm font-bold text-emerald-600 border-b-2 border-emerald-500 bg-white transition-all flex items-center justify-center gap-2">
-              📰 뉴스 검색
+              📰 오토 뉴스 (Scraper)
+            </button>
+            <button id="tab-google"
+              class="canvas-tab flex-1 py-3 px-4 text-sm font-bold text-gray-400 border-b-2 border-transparent hover:text-gray-600 transition-all flex items-center justify-center gap-2">
+              🔍 Google 검색
+            </button>
+            <button id="tab-naver"
+              class="canvas-tab flex-1 py-3 px-4 text-sm font-bold text-gray-400 border-b-2 border-transparent hover:text-gray-600 transition-all flex items-center justify-center gap-2">
+              🇳 Naver 검색
             </button>
             <button id="tab-blog"
               class="canvas-tab flex-1 py-3 px-4 text-sm font-bold text-gray-400 border-b-2 border-transparent hover:text-gray-600 transition-all flex items-center justify-center gap-2">
@@ -382,6 +391,29 @@
             </div>
           </div>
 
+          <!-- Google Canvas (for Google Search results) -->
+          <div id="google-canvas"
+            class="canvas-content hidden outline-none min-h-full prose prose-slate max-w-none p-6">
+            <div class="flex flex-col items-center justify-center h-[600px] text-gray-300">
+              <div class="w-20 h-20 bg-gray-100 rounded-full flex items-center justify-center mb-4">
+                <span class="text-3xl">🔍</span>
+              </div>
+              <p class="font-bold text-sm uppercase tracking-widest text-gray-400">Google 검색 결과</p>
+              <p class="text-xs mt-2 text-gray-400">"Google 검색" 버튼을 눌러 시작하세요</p>
+            </div>
+          </div>
+
+          <!-- Naver Canvas (for Naver Search results) -->
+          <div id="naver-canvas" class="canvas-content hidden outline-none min-h-full prose prose-slate max-w-none p-6">
+            <div class="flex flex-col items-center justify-center h-[600px] text-gray-300">
+              <div class="w-20 h-20 bg-gray-100 rounded-full flex items-center justify-center mb-4">
+                <span class="text-3xl">🇳</span>
+              </div>
+              <p class="font-bold text-sm uppercase tracking-widest text-gray-400">Naver 검색 결과</p>
+              <p class="text-xs mt-2 text-gray-400">"네이버 검색" 버튼을 눌러 시작하세요</p>
+            </div>
+          </div>
+
           <!-- Blog Canvas (for generated blog posts) -->
           <div id="blog-canvas" class="canvas-content hidden outline-none min-h-full prose prose-slate max-w-none p-6">
             <div class="flex flex-col items-center justify-center h-[600px] text-gray-300">
@@ -397,7 +429,7 @@
     </main>
   </div>
 
-  <script type="module" src="index.js"></script>
+
   <script type="module" src="/index.tsx"></script>
 </body>
 
